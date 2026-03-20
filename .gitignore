@@ -6,6 +6,7 @@ vendor/
 # Node / Angular
 node_modules/
 dist/
+.angular/
 
 # IDE
 .idea/
@@ -15,3 +16,9 @@ dist/
 # OS
 .DS_Store
 Thumbs.db
+
+# Local env and Go workspace artifacts
+.env
+
+# Local planning artifacts
+CHAT_TODOS.md
