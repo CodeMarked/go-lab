@@ -9,7 +9,8 @@ import (
 )
 
 // DynamicCORS applies an explicit origin allowlist (no wildcard when credentials might be used).
-func DynamicCORS(allowedOrigins []string) gin.HandlerFunc {
+// extraAllowHeaders are appended to Access-Control-Allow-Headers (e.g. CSRF header name).
+func DynamicCORS(allowedOrigins []string, extraAllowHeaders ...string) gin.HandlerFunc {
 	allow := make(map[string]struct{}, len(allowedOrigins))
 	for _, o := range allowedOrigins {
 		o = strings.TrimSpace(o)
@@ -28,11 +29,19 @@ func DynamicCORS(allowedOrigins []string) gin.HandlerFunc {
 			return
 		}
 		c.Header("Access-Control-Allow-Origin", origin)
+		c.Header("Access-Control-Allow-Credentials", "true")
 		c.Header("Vary", "Origin")
 		c.Header("Access-Control-Allow-Methods", strings.Join([]string{
 			http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions,
 		}, ", "))
-		c.Header("Access-Control-Allow-Headers", "Authorization, Content-Type, Accept, "+requestid.Header)
+		baseHdr := "Authorization, Content-Type, Accept, " + requestid.Header
+		for _, h := range extraAllowHeaders {
+			h = strings.TrimSpace(h)
+			if h != "" {
+				baseHdr += ", " + h
+			}
+		}
+		c.Header("Access-Control-Allow-Headers", baseHdr)
 		c.Header("Access-Control-Expose-Headers", "Content-Length, "+requestid.Header)
 		c.Header("Access-Control-Max-Age", "600")
 

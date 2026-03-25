@@ -24,7 +24,7 @@ func setupRouterWithMockDB(t *testing.T) (*gin.Engine, sqlmock.Sqlmock, string, 
 	t.Helper()
 	gin.SetMode(gin.TestMode)
 
-	ts, err := auth.NewTokenService(testJWTSecret, "go-lab", "go-lab-api", time.Hour)
+	ts, err := auth.NewTokenService(testJWTSecret, "", "go-lab", "go-lab-api", time.Hour)
 	if err != nil {
 		t.Fatalf("token service: %v", err)
 	}
@@ -41,7 +41,7 @@ func setupRouterWithMockDB(t *testing.T) (*gin.Engine, sqlmock.Sqlmock, string, 
 	router.Use(requestid.Middleware())
 	v1 := router.Group("/api/v1")
 	u := v1.Group("/users")
-	u.Use(middleware.BearerAuth(ts))
+	u.Use(middleware.BearerOrSession(ts, nil, ""))
 	{
 		u.GET("", GetUsers)
 		u.GET("/search", SearchUsers)
@@ -254,11 +254,11 @@ func TestSearchUsersEmptyQuery(t *testing.T) {
 }
 
 func TestJWTWrongSecretRejected(t *testing.T) {
-	ts, err := auth.NewTokenService(testJWTSecret, "go-lab", "go-lab-api", time.Hour)
+	ts, err := auth.NewTokenService(testJWTSecret, "", "go-lab", "go-lab-api", time.Hour)
 	if err != nil {
 		t.Fatal(err)
 	}
-	other, err := auth.NewTokenService(strings.Repeat("y", 32), "go-lab", "go-lab-api", time.Hour)
+	other, err := auth.NewTokenService(strings.Repeat("y", 32), "", "go-lab", "go-lab-api", time.Hour)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -12,6 +12,7 @@ import (
 
 	"github.com/codemarked/go-lab/go_CRUD_api/api"
 	"github.com/codemarked/go-lab/go_CRUD_api/auth"
+	"github.com/codemarked/go-lab/go_CRUD_api/authstore"
 	"github.com/codemarked/go-lab/go_CRUD_api/config"
 	"github.com/codemarked/go-lab/go_CRUD_api/middleware"
 	"github.com/codemarked/go-lab/go_CRUD_api/myhandlers"
@@ -40,13 +41,18 @@ func main() {
 
 	myhandlers.AppConfig = cfg
 	myhandlers.Database = db
+	myhandlers.AuthStore = authstore.New(db.Db, cfg.SessionIdleTTL, cfg.SessionAbsoluteTTL)
 
-	ts, err := auth.NewTokenService(cfg.JWTSecret, cfg.JWTIssuer, cfg.JWTAudience, cfg.JWTAccessTTL)
+	ts, err := auth.NewTokenService(cfg.JWTSecret, cfg.JWTSecretPrevious, cfg.JWTIssuer, cfg.JWTAudience, cfg.JWTAccessTTL)
 	if err != nil {
 		slog.Error("token_service_init_failed", "error", err)
 		os.Exit(1)
 	}
 	myhandlers.TokenSvc = ts
+
+	if cfg.JWTActiveKeyID != "" {
+		slog.Info("jwt_key_policy", "active_key_id", cfg.JWTActiveKeyID, "note", "placeholder_for_future_HS256_key_rotation")
+	}
 
 	r := setupRouter(cfg)
 
@@ -88,7 +94,7 @@ func setupRouter(cfg *config.Config) *gin.Engine {
 	r.Use(requestid.Middleware())
 	r.Use(middleware.SecurityHeaders())
 	if len(cfg.CORSAllowedOrigins) > 0 {
-		r.Use(middleware.DynamicCORS(cfg.CORSAllowedOrigins))
+		r.Use(middleware.DynamicCORS(cfg.CORSAllowedOrigins, cfg.CSRFHeaderName))
 	}
 	r.Use(legacyAPIMiddleware())
 
@@ -96,12 +102,32 @@ func setupRouter(cfg *config.Config) *gin.Engine {
 	r.GET("/readyz", myhandlers.Ready)
 
 	v1 := r.Group("/api/v1")
+	v1.Use(middleware.CSRFCookieProtect(cfg))
 	{
-		v1.POST("/auth/token", middleware.NewTokenEndpointLimiter(30), myhandlers.IssueToken(cfg))
-		v1.POST("/auth/bootstrap", middleware.NewTokenEndpointLimiter(30), myhandlers.IssueBootstrapToken(cfg))
+		registerLim := middleware.NewFixedWindowLimiter(15, "too many registration attempts")
+		loginLim := middleware.NewFixedWindowLimiter(30, "too many login attempts")
+		logoutLim := middleware.NewFixedWindowLimiter(60, "too many logout attempts")
+		refreshLim := middleware.NewFixedWindowLimiter(120, "too many session refresh attempts")
+		tokenLim := middleware.NewFixedWindowLimiter(30, "too many token requests")
+		csrfGetLim := middleware.NewFixedWindowLimiter(60, "too many csrf requests")
+		changePwdLim := middleware.NewFixedWindowLimiter(10, "too many password change attempts")
+
+		v1.POST("/auth/register", registerLim, myhandlers.RegisterUser(cfg))
+		v1.POST("/auth/login", loginLim, myhandlers.LoginUser(cfg))
+		v1.POST("/auth/logout", logoutLim, myhandlers.LogoutUser(cfg))
+		v1.POST("/auth/refresh", refreshLim, myhandlers.RefreshSession(cfg))
+		v1.GET("/auth/csrf", csrfGetLim, myhandlers.GetAuthCSRF(cfg))
+
+		v1.POST("/auth/change-password", changePwdLim,
+			middleware.BearerOrSession(myhandlers.TokenSvc, myhandlers.AuthStore, cfg.SessionCookieName),
+			myhandlers.ChangePassword(cfg),
+		)
+
+		v1.POST("/auth/token", tokenLim, myhandlers.IssueToken(cfg))
+		v1.POST("/auth/bootstrap", tokenLim, myhandlers.IssueBootstrapToken(cfg))
 
 		users := v1.Group("/users")
-		users.Use(middleware.BearerAuth(myhandlers.TokenSvc))
+		users.Use(middleware.BearerOrSession(myhandlers.TokenSvc, myhandlers.AuthStore, cfg.SessionCookieName))
 		users.GET("", myhandlers.GetUsers)
 		users.GET("/search", myhandlers.SearchUsers)
 		users.GET("/:id", myhandlers.GetUserByID)

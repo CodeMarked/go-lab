@@ -114,4 +114,59 @@ catch {
 }
 Assert-True $notFound "deleted user should return 404 on fetch"
 
+# Cookie session: register -> login -> GET /users with jar -> logout -> 401
+$webSess = New-Object Microsoft.PowerShell.Commands.WebRequestSession
+$ts = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+$sessionEmail = "smoke+$ts@example.com"
+$regBody = @{
+    email    = $sessionEmail
+    password = "smoke-pass-8ch"
+    name     = "SmokeSession"
+} | ConvertTo-Json
+$regResp = Invoke-WebRequest -Uri "$ApiBaseUrl/api/v1/auth/register" -Method POST -Body $regBody -ContentType "application/json; charset=utf-8" -WebSession $webSess
+Assert-True ($regResp.StatusCode -eq 201) "register should return 201"
+
+$loginBody = @{
+    email    = $sessionEmail
+    password = "smoke-pass-8ch"
+} | ConvertTo-Json
+$loginResp = Invoke-WebRequest -Uri "$ApiBaseUrl/api/v1/auth/login" -Method POST -Body $loginBody -ContentType "application/json; charset=utf-8" -WebSession $webSess
+Assert-True ($loginResp.StatusCode -eq 200) "login should return 200"
+$cookieJar = $webSess.Cookies.GetCookies([Uri]$ApiBaseUrl)
+$glCookie = $cookieJar | Where-Object { $_.Name -eq "gl_session" }
+Assert-True ($null -ne $glCookie) "login should set gl_session cookie"
+$csrfCookie = $cookieJar | Where-Object { $_.Name -eq "gl_csrf" }
+Assert-True ($null -ne $csrfCookie) "login should set gl_csrf cookie"
+
+$csrfReady = Invoke-RestMethod -Uri "$ApiBaseUrl/api/v1/auth/csrf" -WebSession $webSess
+Assert-True ($csrfReady.data.csrf_ready -eq $true) "GET /auth/csrf should succeed with session"
+
+$usersViaCookie = Invoke-RestMethod -Uri "$ApiBaseUrl/api/v1/users" -WebSession $webSess
+Assert-True ($usersViaCookie.data.Count -ge 1) "GET /users with session cookie should succeed"
+
+$jarForLogout = $webSess.Cookies.GetCookies([Uri]$ApiBaseUrl)
+$csrfForLogout = ($jarForLogout | Where-Object { $_.Name -eq "gl_csrf" }).Value
+Assert-True ($null -ne $csrfForLogout) "csrf cookie should exist before logout"
+$csrfHdr = @{ "X-CSRF-Token" = $csrfForLogout }
+Invoke-RestMethod -Uri "$ApiBaseUrl/api/v1/auth/logout" -Method POST -WebSession $webSess -Headers $csrfHdr | Out-Null
+
+$cookieDead = $false
+try {
+    Invoke-RestMethod -Uri "$ApiBaseUrl/api/v1/users" -WebSession $webSess | Out-Null
+}
+catch {
+    if ($_.Exception.Response.StatusCode.value__ -eq 401) {
+        $cookieDead = $true
+    }
+    else {
+        throw
+    }
+}
+Assert-True $cookieDead "after logout, GET /users with cookie should return 401"
+
+# Bootstrap deprecation metadata (Origin required)
+$bootResp = Invoke-RestMethod -Method POST -Uri "$ApiBaseUrl/api/v1/auth/bootstrap" -Headers @{ Origin = "http://localhost:4200" } -ContentType "application/json" -Body "{}"
+Assert-True ($null -ne $bootResp.data.bootstrap) "bootstrap should include data.bootstrap deprecation object"
+Assert-True ($bootResp.data.bootstrap.temporary -eq $true) "bootstrap.temporary should be true"
+
 Write-Host "Smoke tests passed."

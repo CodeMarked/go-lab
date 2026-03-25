@@ -116,5 +116,9 @@ func parseID(idParam string) (int, error) {
 }
 
 func dsnFromConfig(cfg *config.Config) string {
-	return fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", cfg.DBUser, cfg.DBPass, cfg.DBHost, cfg.DBPort, cfg.DBName)
+	// parseTime + UTC: without parseTime, TIMESTAMP/DATETIME scans break session expiry checks (401 after login).
+	return fmt.Sprintf(
+		"%s:%s@tcp(%s:%s)/%s?parseTime=true&loc=UTC&charset=utf8mb4",
+		cfg.DBUser, cfg.DBPass, cfg.DBHost, cfg.DBPort, cfg.DBName,
+	)
 }

@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -12,10 +13,11 @@ import (
 
 // TokenService issues and verifies access tokens (HS256).
 type TokenService struct {
-	secret   []byte
-	issuer   string
-	audience string
-	ttl      time.Duration
+	secret     []byte
+	prevSecret []byte // optional; ParseAccessToken accepts signatures from either during rotation
+	issuer     string
+	audience   string
+	ttl        time.Duration
 }
 
 // Claims embedded in access JWTs.
@@ -24,18 +26,27 @@ type Claims struct {
 }
 
 // NewTokenService builds a verifier/issuer. secret must be non-empty.
-func NewTokenService(secret, issuer, audience string, ttl time.Duration) (*TokenService, error) {
+// previousSecret may be empty; when set it must be at least 32 bytes and tokens verify against either secret until rotation completes.
+func NewTokenService(secret, previousSecret, issuer, audience string, ttl time.Duration) (*TokenService, error) {
 	if len(secret) < 32 {
 		return nil, errors.New("JWT secret too short")
 	}
 	if issuer == "" || audience == "" {
 		return nil, errors.New("issuer and audience required")
 	}
+	var prev []byte
+	if strings.TrimSpace(previousSecret) != "" {
+		if len(previousSecret) < 32 {
+			return nil, errors.New("previous JWT secret too short")
+		}
+		prev = []byte(previousSecret)
+	}
 	return &TokenService{
-		secret:   []byte(secret),
-		issuer:   issuer,
-		audience: audience,
-		ttl:      ttl,
+		secret:     []byte(secret),
+		prevSecret: prev,
+		issuer:     issuer,
+		audience:   audience,
+		ttl:        ttl,
 	}, nil
 }
 
@@ -71,11 +82,25 @@ func (s *TokenService) MintAccessToken(subject string) (string, time.Time, error
 
 // ParseAccessToken validates signature, expiry, issuer, and audience.
 func (s *TokenService) ParseAccessToken(tokenString string) (*Claims, error) {
+	claims, err := s.parseAccessTokenWithSecret(tokenString, s.secret)
+	if err == nil {
+		return claims, nil
+	}
+	if len(s.prevSecret) > 0 {
+		claims, prevErr := s.parseAccessTokenWithSecret(tokenString, s.prevSecret)
+		if prevErr == nil {
+			return claims, nil
+		}
+	}
+	return nil, err
+}
+
+func (s *TokenService) parseAccessTokenWithSecret(tokenString string, secret []byte) (*Claims, error) {
 	t, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(t *jwt.Token) (any, error) {
 		if t.Method != jwt.SigningMethodHS256 {
 			return nil, fmt.Errorf("unexpected signing method %v", t.Header["alg"])
 		}
-		return s.secret, nil
+		return secret, nil
 	}, jwt.WithIssuer(s.issuer), jwt.WithAudience(s.audience), jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}))
 	if err != nil {
 		return nil, err
