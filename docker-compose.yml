@@ -26,9 +26,13 @@ services:
       DB_HOST: mysql
       DB_PORT: "3306"
       API_PORT: "5000"
+      # Backend listens on HTTP; browsers reject Set-Cookie with Secure without TLS.
+      SESSION_COOKIE_SECURE: "false"
     depends_on:
       mysql:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     ports:
       - "5000:5000"
     healthcheck:

@@ -1,47 +1,44 @@
-/* DashboardComponent's private CSS styles */
-
-h2 {
-    text-align: center;
-  }
-  
-  .users-menu {
-    max-width: 300px;
-    /* flexbox */
-    display: flex;
-    flex-direction: column;
-    flex-wrap: wrap;
-    justify-content: space-around;
-    align-self: center;
-    margin: 0 auto;
-  }
-  
-  a {
-    display: block;
-    background-color: #3f525c;
-    border-radius: 2px;
-    padding: 1rem;
-    font-size: 1.2rem;
-    text-decoration: none;
-    color: #fff;
-    text-align: center;
-    width: 100%;
-    min-width: 70px;
-    margin: .5rem;
-    box-sizing: border-box;
-  
-    /* flexbox */
-    order: 0;
-    flex: 0 1 auto;
-    align-self: auto;
-  }
-  
-  /* @media (min-width: 600px) {
-    a {
-      width: 18%;
-      box-sizing: content-box;
-    }
-  } */
-  
-  a:hover {
-    background-color: #000;
-  }
+.operator {
+  margin-bottom: 2rem;
+  padding: 1rem;
+  background: #f5f7f8;
+  border-radius: 8px;
+}
+.hint {
+  color: #555;
+  font-size: 0.9rem;
+  margin-top: 0;
+}
+.tiles {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+.tiles li {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  min-width: 10rem;
+}
+.tiles a {
+  font-weight: 600;
+}
+.sub {
+  display: block;
+  font-size: 0.75rem;
+  color: #666;
+  margin-top: 0.25rem;
+}
+.tile-label {
+  font-weight: 600;
+}
+.mono {
+  font-family: ui-monospace, monospace;
+  word-break: break-all;
+}
+.richest h2 {
+  margin-top: 0;
+}

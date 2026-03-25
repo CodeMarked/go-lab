@@ -1,11 +1,17 @@
-<body>
-    <div>
-        <nav>
-            <a routerLink="/dashboard">Dashboard</a>
-            <a routerLink="/users">Users</a>
-            <app-user-search></app-user-search>
-        </nav>
-        <router-outlet></router-outlet>
-        <app-messages></app-messages>
-    </div>
-</body>
+<div class="app-frame">
+  <header *ngIf="loggedIn$ | async" class="admin-header">
+    <div class="brand">{{ title }}</div>
+    <nav class="admin-nav">
+      <a routerLink="/dashboard" routerLinkActive="active">Dashboard</a>
+      <a routerLink="/users" routerLinkActive="active">Users</a>
+      <app-user-search></app-user-search>
+      <span class="spacer"></span>
+      <span *ngIf="useBootstrapAuth" class="badge">bootstrap auth</span>
+      <button type="button" class="linkish" (click)="logout()">Sign out</button>
+    </nav>
+  </header>
+  <main>
+    <router-outlet></router-outlet>
+  </main>
+  <app-messages></app-messages>
+</div>

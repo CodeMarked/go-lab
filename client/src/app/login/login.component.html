@@ -1,0 +1,20 @@
+<div class="auth-card">
+  <h1>Platform admin</h1>
+  <p class="muted">Sign in with your account (cookie session).</p>
+  <p class="session-note" *ngIf="sessionExpiredBanner">
+    Your session expired or was revoked. Sign in again to continue.
+  </p>
+  <form (ngSubmit)="submit()">
+    <label>
+      Email
+      <input name="email" type="email" [(ngModel)]="email" required autocomplete="username" />
+    </label>
+    <label>
+      Password
+      <input name="password" type="password" [(ngModel)]="password" required autocomplete="current-password" />
+    </label>
+    <button type="submit" [disabled]="loading">Sign in</button>
+  </form>
+  <p class="error" *ngIf="errorMsg">{{ errorMsg }}</p>
+  <p><a routerLink="/register">Create an account</a></p>
+</div>
