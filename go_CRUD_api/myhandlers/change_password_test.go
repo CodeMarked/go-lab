@@ -55,7 +55,7 @@ func TestChangePasswordWithBearerRevokesSessions(t *testing.T) {
 	r.Use(requestid.Middleware())
 	r.Use(middleware.CSRFCookieProtect(cfg))
 	r.POST("/api/v1/auth/change-password",
-		middleware.BearerOrSession(ts, AuthStore, "gl_session"),
+		middleware.BearerOrSession(ts, AuthStore, "gl_session", nil),
 		ChangePassword(cfg),
 	)
 

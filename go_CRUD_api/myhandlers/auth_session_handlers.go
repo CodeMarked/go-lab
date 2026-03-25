@@ -114,7 +114,7 @@ func LoginUser(cfg *config.Config) gin.HandlerFunc {
 			respond.Error(c, http.StatusUnauthorized, api.CodeUnauthorized, "invalid email or password", nil)
 			return
 		}
-		if locked, retry := loginEmailLocked(email); locked {
+		if locked, retry := loginEmailLocked(c.Request.Context(), email); locked {
 			sec := int(retry.Seconds()) + 1
 			if sec < 1 {
 				sec = 1
@@ -136,12 +136,12 @@ func LoginUser(cfg *config.Config) gin.HandlerFunc {
 		}
 		ok, err := auth.VerifyPassword(body.Password, hash)
 		if err != nil || !ok {
-			recordLoginFailureKnownUser(email)
+			recordLoginFailureKnownUser(c.Request.Context(), email)
 			authLoginFail(c, &uid, email, "bad_password")
 			respond.Error(c, http.StatusUnauthorized, api.CodeUnauthorized, "invalid email or password", nil)
 			return
 		}
-		recordLoginSuccessClearThrottle(email)
+		recordLoginSuccessClearThrottle(c.Request.Context(), email)
 		raw, err := authstore.NewOpaqueToken()
 		if err != nil {
 			respond.Error(c, http.StatusInternalServerError, api.CodeInternal, "login failed", nil)

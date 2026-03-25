@@ -55,6 +55,13 @@ type Config struct {
 	// CSRF double-submit: non-HttpOnly cookie + matching header on cookie-session mutating requests.
 	CSRFCookieName  string
 	CSRFHeaderName  string
+
+	// OIDC_ISSUER_URL + OIDC_AUDIENCE: both set enables RS256 bearer verification (Auth0-style). Both empty = legacy-only.
+	OIDCIssuerURL string
+	OIDCAudience  string
+
+	// RedisURL: optional shared Redis for cross-replica rate limits and login lockout; empty keeps in-memory behavior.
+	RedisURL string
 }
 
 // Load reads and validates configuration from the environment.
@@ -164,6 +171,15 @@ func Load() (*Config, error) {
 	} else {
 		c.CORSAllowedOrigins = []string{"http://localhost:4200"}
 	}
+
+	oidcIss := strings.TrimSpace(os.Getenv("OIDC_ISSUER_URL"))
+	oidcAud := strings.TrimSpace(os.Getenv("OIDC_AUDIENCE"))
+	if (oidcIss != "") != (oidcAud != "") {
+		return nil, errors.New("OIDC_ISSUER_URL and OIDC_AUDIENCE must both be set or both empty")
+	}
+	c.OIDCIssuerURL = oidcIss
+	c.OIDCAudience = oidcAud
+	c.RedisURL = strings.TrimSpace(os.Getenv("REDIS_URL"))
 
 	return c, nil
 }

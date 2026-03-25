@@ -66,7 +66,8 @@ func writeAuthError(c *gin.Context, status int, code, message string) {
 
 // BearerOrSession accepts either Authorization: Bearer (JWT) or a valid HttpOnly session cookie (opaque token, server-side hash).
 // If Authorization is present, cookie is ignored (avoids ambiguous dual-auth).
-func BearerOrSession(ts *auth.TokenService, store *authstore.Store, sessionCookieName string) gin.HandlerFunc {
+// Bearer path: HS256 platform JWT first; if that fails and oidc is non-nil, RS256 OIDC access tokens (e.g. Auth0) are tried.
+func BearerOrSession(ts *auth.TokenService, store *authstore.Store, sessionCookieName string, oidc *auth.OIDC) gin.HandlerFunc {
 	if ts == nil {
 		return func(c *gin.Context) {
 			writeAuthError(c, http.StatusInternalServerError, api.CodeInternal, "authentication not configured")
@@ -88,20 +89,32 @@ func BearerOrSession(ts *auth.TokenService, store *authstore.Store, sessionCooki
 				c.Abort()
 				return
 			}
-			claims, err := ts.ParseAccessToken(token)
-			if err != nil {
+			claims, errHS := ts.ParseAccessToken(token)
+			if errHS == nil {
+				sub := strings.TrimSpace(claims.Subject)
+				if sub == "" {
+					writeAuthError(c, http.StatusUnauthorized, api.CodeUnauthorized, "invalid token subject")
+					c.Abort()
+					return
+				}
+				c.Set("auth_subject", sub)
+				c.Next()
+				return
+			}
+			if oidc != nil {
+				subj, errOIDC := oidc.TryResolveAuthSubject(c.Request.Context(), token)
+				if errOIDC == nil {
+					c.Set("auth_subject", subj)
+					c.Next()
+					return
+				}
+				auth.LogReject(requestid.FromContext(c), token, errOIDC)
 				writeAuthError(c, http.StatusUnauthorized, api.CodeUnauthorized, "invalid or expired token")
 				c.Abort()
 				return
 			}
-			sub := strings.TrimSpace(claims.Subject)
-			if sub == "" {
-				writeAuthError(c, http.StatusUnauthorized, api.CodeUnauthorized, "invalid token subject")
-				c.Abort()
-				return
-			}
-			c.Set("auth_subject", sub)
-			c.Next()
+			writeAuthError(c, http.StatusUnauthorized, api.CodeUnauthorized, "invalid or expired token")
+			c.Abort()
 			return
 		}
 

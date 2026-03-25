@@ -11,7 +11,7 @@ Pick one of:
 - **Release tag:** e.g. disable bootstrap starting at `go-lab v0.3.0` (adjust to your versioning).
 - **Date:** e.g. “no sooner than YYYY-MM-DD after SPA ships cookie login in production.”
 
-Document the chosen milestone in your internal release notes.
+**Audit record:** When chosen, record the milestone in [MASTER_PLAN.md](MASTER_PLAN.md) §10 (open questions / decisions) and in release notes or tags as appropriate.
 
 ## Operator checklist
 
@@ -24,3 +24,8 @@ Document the chosen milestone in your internal release notes.
 ## Rollback
 
 If a legacy client still needs bootstrap briefly, set `AUTH_BOOTSTRAP_ENABLED=true` again, fix the client, then re-disable.
+
+## Related
+
+- [auth-session.md](auth-session.md) — cookie login and CSRF.
+- [README.md](README.md) — documentation index.

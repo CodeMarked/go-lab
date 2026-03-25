@@ -16,6 +16,7 @@ import (
 	"github.com/codemarked/go-lab/go_CRUD_api/config"
 	"github.com/codemarked/go-lab/go_CRUD_api/middleware"
 	"github.com/codemarked/go-lab/go_CRUD_api/myhandlers"
+	"github.com/codemarked/go-lab/go_CRUD_api/redisx"
 	"github.com/codemarked/go-lab/go_CRUD_api/requestid"
 	"github.com/codemarked/go-lab/go_CRUD_api/respond"
 	"github.com/gin-gonic/gin"
@@ -31,6 +32,9 @@ func main() {
 		os.Exit(1)
 	}
 	gin.SetMode(cfg.GinMode)
+
+	redisx.Init(cfg.RedisURL)
+	defer redisx.Close()
 
 	db, err := myhandlers.NewDatabase(cfg)
 	if err != nil {
@@ -50,11 +54,23 @@ func main() {
 	}
 	myhandlers.TokenSvc = ts
 
+	var oidcSvc *auth.OIDC
+	if cfg.OIDCIssuerURL != "" {
+		octx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		oidcSvc, err = auth.NewOIDC(octx, cfg.OIDCIssuerURL, cfg.OIDCAudience, myhandlers.AuthStore)
+		cancel()
+		if err != nil {
+			slog.Error("oidc_init_failed", "error", err)
+			os.Exit(1)
+		}
+		slog.Info("oidc_enabled", "issuer", cfg.OIDCIssuerURL)
+	}
+
 	if cfg.JWTActiveKeyID != "" {
 		slog.Info("jwt_key_policy", "active_key_id", cfg.JWTActiveKeyID, "note", "placeholder_for_future_HS256_key_rotation")
 	}
 
-	r := setupRouter(cfg)
+	r := setupRouter(cfg, oidcSvc)
 
 	srv := &http.Server{
 		Addr:              ":" + cfg.APIPort,
@@ -86,7 +102,7 @@ func main() {
 	slog.Info("server_stopped")
 }
 
-func setupRouter(cfg *config.Config) *gin.Engine {
+func setupRouter(cfg *config.Config, oidc *auth.OIDC) *gin.Engine {
 	r := gin.New()
 	r.Use(gin.Recovery())
 	r.MaxMultipartMemory = 1 << 20 // 1 MiB
@@ -104,13 +120,13 @@ func setupRouter(cfg *config.Config) *gin.Engine {
 	v1 := r.Group("/api/v1")
 	v1.Use(middleware.CSRFCookieProtect(cfg))
 	{
-		registerLim := middleware.NewFixedWindowLimiter(15, "too many registration attempts")
-		loginLim := middleware.NewFixedWindowLimiter(30, "too many login attempts")
-		logoutLim := middleware.NewFixedWindowLimiter(60, "too many logout attempts")
-		refreshLim := middleware.NewFixedWindowLimiter(120, "too many session refresh attempts")
-		tokenLim := middleware.NewFixedWindowLimiter(30, "too many token requests")
-		csrfGetLim := middleware.NewFixedWindowLimiter(60, "too many csrf requests")
-		changePwdLim := middleware.NewFixedWindowLimiter(10, "too many password change attempts")
+		registerLim := middleware.NewFixedWindowLimiter("auth_register", 15, "too many registration attempts")
+		loginLim := middleware.NewFixedWindowLimiter("auth_login", 30, "too many login attempts")
+		logoutLim := middleware.NewFixedWindowLimiter("auth_logout", 60, "too many logout attempts")
+		refreshLim := middleware.NewFixedWindowLimiter("auth_refresh", 120, "too many session refresh attempts")
+		tokenLim := middleware.NewFixedWindowLimiter("auth_token", 30, "too many token requests")
+		csrfGetLim := middleware.NewFixedWindowLimiter("auth_csrf", 60, "too many csrf requests")
+		changePwdLim := middleware.NewFixedWindowLimiter("auth_change_password", 10, "too many password change attempts")
 
 		v1.POST("/auth/register", registerLim, myhandlers.RegisterUser(cfg))
 		v1.POST("/auth/login", loginLim, myhandlers.LoginUser(cfg))
@@ -119,7 +135,7 @@ func setupRouter(cfg *config.Config) *gin.Engine {
 		v1.GET("/auth/csrf", csrfGetLim, myhandlers.GetAuthCSRF(cfg))
 
 		v1.POST("/auth/change-password", changePwdLim,
-			middleware.BearerOrSession(myhandlers.TokenSvc, myhandlers.AuthStore, cfg.SessionCookieName),
+			middleware.BearerOrSession(myhandlers.TokenSvc, myhandlers.AuthStore, cfg.SessionCookieName, oidc),
 			myhandlers.ChangePassword(cfg),
 		)
 
@@ -127,7 +143,7 @@ func setupRouter(cfg *config.Config) *gin.Engine {
 		v1.POST("/auth/bootstrap", tokenLim, myhandlers.IssueBootstrapToken(cfg))
 
 		users := v1.Group("/users")
-		users.Use(middleware.BearerOrSession(myhandlers.TokenSvc, myhandlers.AuthStore, cfg.SessionCookieName))
+		users.Use(middleware.BearerOrSession(myhandlers.TokenSvc, myhandlers.AuthStore, cfg.SessionCookieName, oidc))
 		users.GET("", myhandlers.GetUsers)
 		users.GET("/search", myhandlers.SearchUsers)
 		users.GET("/:id", myhandlers.GetUserByID)

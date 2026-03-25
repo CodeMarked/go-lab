@@ -68,5 +68,11 @@ services:
       mysql:
         condition: service_healthy
 
+  redis:
+    image: redis:7-alpine
+    profiles: ["redis"]
+    ports:
+      - "6379:6379"
+
 volumes:
   mysql-data:

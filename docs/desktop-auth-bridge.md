@@ -24,3 +24,9 @@
 ## JWT access
 
 - Bearer tokens are **short-lived** (`JWT_ACCESS_TTL_SECONDS`). Desktop should refresh by re-authenticating or using a future refresh contract (`auth_refresh_tokens` table is reserved).
+
+## Related
+
+- [auth-session.md](auth-session.md) — cookies, CSRF, service token endpoint.
+- [oidc-auth0.md](oidc-auth0.md) — external IdP Bearer validation.
+- [jwt-rotation.md](jwt-rotation.md) — HS256 platform JWT rotation.

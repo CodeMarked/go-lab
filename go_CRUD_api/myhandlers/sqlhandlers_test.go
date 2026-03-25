@@ -41,7 +41,7 @@ func setupRouterWithMockDB(t *testing.T) (*gin.Engine, sqlmock.Sqlmock, string, 
 	router.Use(requestid.Middleware())
 	v1 := router.Group("/api/v1")
 	u := v1.Group("/users")
-	u.Use(middleware.BearerOrSession(ts, nil, ""))
+	u.Use(middleware.BearerOrSession(ts, nil, "", nil))
 	{
 		u.GET("", GetUsers)
 		u.GET("/search", SearchUsers)

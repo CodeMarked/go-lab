@@ -1,11 +1,13 @@
 package middleware
 
 import (
+	"log/slog"
 	"net/http"
 	"sync"
 	"time"
 
 	"github.com/codemarked/go-lab/go_CRUD_api/api"
+	"github.com/codemarked/go-lab/go_CRUD_api/redisx"
 	"github.com/codemarked/go-lab/go_CRUD_api/respond"
 	"github.com/gin-gonic/gin"
 )
@@ -16,13 +18,16 @@ type ipWindow struct {
 }
 
 // NewFixedWindowLimiter limits requests per client IP in a fixed 1-minute window.
-// In-memory only: not shared across replicas (see docs/auth-session.md abuse section).
-func NewFixedWindowLimiter(rpm int, message string) gin.HandlerFunc {
+// scope isolates Redis keys between routes. With redisx.Client set, counts are shared across replicas; otherwise in-memory only.
+func NewFixedWindowLimiter(scope string, rpm int, message string) gin.HandlerFunc {
 	if rpm <= 0 {
 		rpm = 30
 	}
 	if message == "" {
 		message = "too many requests"
+	}
+	if scope == "" {
+		scope = "default"
 	}
 	var mu sync.Mutex
 	byIP := make(map[string]*ipWindow)
@@ -30,6 +35,22 @@ func NewFixedWindowLimiter(rpm int, message string) gin.HandlerFunc {
 
 	return func(c *gin.Context) {
 		ip := c.ClientIP()
+		if rdb := redisx.Client; rdb != nil {
+			ok, rerr := fixedWindowRedisAllow(c.Request.Context(), rdb, scope, ip, rpm)
+			if rerr != nil {
+				slog.Warn("redis_rate_limit_failed_open", "scope", scope, "error", rerr.Error())
+				c.Next()
+				return
+			}
+			if !ok {
+				respond.Error(c, http.StatusTooManyRequests, api.CodeRateLimited, message, nil)
+				c.Abort()
+				return
+			}
+			c.Next()
+			return
+		}
+
 		now := time.Now()
 		mu.Lock()
 		w, ok := byIP[ip]
@@ -55,5 +76,5 @@ func NewFixedWindowLimiter(rpm int, message string) gin.HandlerFunc {
 
 // NewTokenEndpointLimiter limits token endpoint calls per client IP (fixed 1-minute window).
 func NewTokenEndpointLimiter(rpm int) gin.HandlerFunc {
-	return NewFixedWindowLimiter(rpm, "too many token requests")
+	return NewFixedWindowLimiter("auth_token", rpm, "too many token requests")
 }

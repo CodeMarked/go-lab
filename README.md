@@ -1,95 +1,73 @@
 # go-lab
 
-Go API, Angular SPA, MySQL 8.4, and golang-migrate, orchestrated with Docker Compose. Sources: [`go_CRUD_api/`](go_CRUD_api/), [`client/`](client/), [`migrations/`](migrations/).
+Go API, Angular SPA, MySQL 8.4, golang-migrate, Docker Compose. Code: [`go_CRUD_api/`](go_CRUD_api/), [`client/`](client/), [`migrations/`](migrations/).
 
-**Prerequisites:** Docker with Compose and Git.
-
-**Go on your machine is optional.** Image builds only run `go build` (not tests). CI runs `go test ./...` on GitHub. Install Go 1.23+ if you want local tests or `go run` without Docker.
+**Need:** Docker + Compose + Git. **Go 1.24+** only for local `go test` / `go run` (CI and the backend image match `go_CRUD_api/go.mod`).
 
 ## First-time setup
 
-1. Copy [`.env.example`](.env.example) to `.env` and set secrets (e.g. long `JWT_SECRET`; `PLATFORM_CLIENT_ID` / `PLATFORM_CLIENT_SECRET` for auth).
+1. `cp .env.example .env` (PowerShell: `Copy-Item .env.example .env`) — set long `JWT_SECRET`, `PLATFORM_CLIENT_*`.
+2. `docker compose up -d --build`
+3. `docker compose run --rm migrate` (any fresh DB or new migration)
+4. **UI** [localhost:4200](http://localhost:4200) · **API** [localhost:5000](http://localhost:5000) · **health** `/healthz` · **ready** `/readyz` · MySQL `localhost:3306`
 
-   ```bash
-   cp .env.example .env
-   ```
+Schema comes **only** from [`migrations/`](migrations/), not app startup.
 
-   PowerShell: `Copy-Item .env.example .env`
+### Admin SPA (Angular)
 
-2. Start the stack:
-
-   ```bash
-   docker compose up -d --build
-   ```
-
-3. Apply schema (every fresh DB, and after new migration files):
-
-   ```bash
-   docker compose run --rm migrate
-   ```
-
-4. **App** [http://localhost:4200](http://localhost:4200) · **API** [http://localhost:5000](http://localhost:5000) · **health** [http://localhost:5000/healthz](http://localhost:5000/healthz) · **readiness** [http://localhost:5000/readyz](http://localhost:5000/readyz) · MySQL `localhost:3306`
-
-Tables are not created by the app at startup—only the `migrate` job applies [`migrations/`](migrations/).
-
-### Platform admin (Angular)
-
-- Default auth is **cookie login** (`client/src/environments/environment.ts`: `useBootstrapAuth: false`). Open [http://localhost:4200](http://localhost:4200) → **Register** (first user) → **Sign in**. Mutating API calls send **CSRF** via `X-CSRF-Token` (read from `gl_csrf` cookie); all API calls use **`withCredentials`**. While signed in, the SPA periodically calls **`POST /auth/refresh`** (`sessionRefreshIntervalMs`, keep below `SESSION_IDLE_TTL_SECONDS`). A **401** on protected API calls clears local state and sends the user to sign-in again.
-- Dev-only **bootstrap JWT** bridge: set `useBootstrapAuth: true` to call `POST /api/v1/auth/bootstrap` on startup (no register/login UI needed). Production-style deploys should keep it **false** ([`docs/bootstrap-sunset.md`](docs/bootstrap-sunset.md)).
-- **Same-origin API (required for cookie sessions):** Browsers treat `localhost:4200` and `localhost:5000` as **different sites**, so `SameSite=Lax` session cookies are **not** sent on XHR to port 5000. The app defaults to **`apiBaseUrl: ''`** and calls **`/api/v1/...`** on the **same host as the SPA**. Docker: [`docker/frontend.nginx.conf`](docker/frontend.nginx.conf) proxies **`/api/`**, **`/healthz`**, **`/readyz`** to the `backend` service. Local: `ng serve` uses [`client/proxy.conf.json`](client/proxy.conf.json). Only set a full `apiBaseUrl` (e.g. `http://localhost:5000`) if you intentionally use **bootstrap Bearer** auth, not cookie login.
-- **Docker UI (`frontend` service, port 4200):** open [http://localhost:4200/](http://localhost:4200/) — API traffic stays on that origin via nginx. You can still hit the backend directly at [http://localhost:5000](http://localhost:5000) for **`/healthz`** / **`/readyz`** / debugging.
+- **Cookie auth (default):** `useBootstrapAuth: false` in `client/src/environments/environment.ts` → Register → Sign in. Mutations need **CSRF** header (`X-CSRF-Token` = `gl_csrf` cookie) and **`withCredentials`**. Periodic **`POST /api/v1/auth/refresh`**; **401** → sign-in again.
+- **Bootstrap JWT (dev):** `useBootstrapAuth: true` calls `POST /api/v1/auth/bootstrap`. Turn off for prod-style deploys — [docs/bootstrap-sunset.md](docs/bootstrap-sunset.md).
+- **Same origin for cookies:** different ports = different sites, so use **`apiBaseUrl: ''`** and proxy `/api` on the SPA host ([`docker/frontend.nginx.conf`](docker/frontend.nginx.conf), [`client/proxy.conf.json`](client/proxy.conf.json)). Full URL to `:5000` only if you mean to use **Bearer**, not cookie session.
 
 ## Daily use
 
-- **Start (rebuild images):** `docker compose up -d --build`
-- **Start (reuse images):** `docker compose up -d`
-- **Migrations:** `docker compose run --rm migrate` (on full stack, `backend` waits for the `migrate` service to finish successfully so the API does not start on an empty schema).
-- **Register returns 500:** Check backend logs for `auth_register_db_error`. Usually **migrations not applied** (`Unknown column 'email'` / missing `auth_*` tables) or **`MIGRATION_EXPECTED_VERSION` unset** so `/readyz` skipped the migration check while the DB was still on an old revision—run migrate and set `MIGRATION_EXPECTED_VERSION` in `.env` (see [`.env.example`](.env.example)).
-- **`migrate up` prints `no change` but `Unknown column 'email'`:** The `schema_migrations` row can be ahead of the real schema (e.g. `force` or a bad copy). Check with `SHOW COLUMNS FROM users;` vs `SELECT version, dirty FROM schema_migrations;`. If version is `2` but `email` is missing, repair with: `docker compose run --rm migrate force 1` then `docker compose run --rm migrate up` (review data impact before doing this on non-dev DBs).
-- **Stop:** `docker compose down` · **wipe DB volume:** `docker compose down -v`
-- **Logs:** `docker compose logs backend --tail 100`
+- Up: `docker compose up -d` (add `--build` when images change)
+- Migrate: `docker compose run --rm migrate` (backend waits for migrate on full stack)
+- **500 on register:** logs `auth_register_db_error` — usually missing migrations or wrong **`MIGRATION_EXPECTED_VERSION`** ([`.env.example`](.env.example))
+- **Schema out of sync** (`no change` but missing columns): compare `users` columns vs `schema_migrations`; repair with care — [docs/migrations.md](docs/migrations.md)
+- Down: `docker compose down` · wipe DB: `docker compose down -v`
+- Logs: `docker compose logs backend --tail 100`
 
 ## Configuration
 
-Everything is env-driven; the full list is in [`.env.example`](.env.example). Commonly touched:
+Full list: [`.env.example`](.env.example). Common:
 
-- `DB_*` — MySQL (DSN includes `parseTime=true&loc=UTC` so session `TIMESTAMP` columns scan correctly; without this, login can succeed then **`GET /users` → 401**)
-- `JWT_SECRET` — signing key (use **≥32** chars in production); optional `JWT_SECRET_PREVIOUS` during rotation ([docs/jwt-rotation.md](docs/jwt-rotation.md))
-- `CSRF_*` — double-submit token names ([docs/auth-session.md](docs/auth-session.md))
-- `PLATFORM_CLIENT_ID` / `PLATFORM_CLIENT_SECRET` — `POST /api/v1/auth/token` and bootstrap issuance
-- `SESSION_*`, `AUTH_BOOTSTRAP_ENABLED` — cookie sessions and bootstrap bridge (see [docs/auth-session.md](docs/auth-session.md)). **`SESSION_COOKIE_SECURE=false`** on plain HTTP (default in [`.env.example`](.env.example)); if unset, the API defaults **Secure=true** and browsers **drop** session cookies—correct password login then **401** on `/users`. Docker Compose also sets `SESSION_COOKIE_SECURE=false` on the `backend` service.
-- `MIGRATION_EXPECTED_VERSION` — if set, `/readyz` enforces migration version
-- `CORS_ALLOWED_ORIGINS` — comma-separated origins (no `*`)
-- `GIN_MODE` — `release` (default) or `debug`
+| Var | Note |
+|-----|------|
+| `DB_*` | DSN uses `parseTime=true` — required for sessions |
+| `JWT_SECRET` | ≥32 chars prod; optional `JWT_SECRET_PREVIOUS` — [jwt-rotation.md](docs/jwt-rotation.md) |
+| `SESSION_*` | HttpOnly session cookie; **`SESSION_COOKIE_SECURE=false`** on plain HTTP (see `.env.example` and Compose) or browsers drop cookies → 401 |
+| `CSRF_*` | Double-submit for cookie mutations — [auth-session.md](docs/auth-session.md) |
+| `PLATFORM_CLIENT_*` | `/auth/token` + bootstrap |
+| `MIGRATION_EXPECTED_VERSION` | Optional; `/readyz` checks version |
+| `OIDC_ISSUER_URL` + `OIDC_AUDIENCE` | Both or neither; RS256 Bearer — [oidc-auth0.md](docs/oidc-auth0.md) |
+| `REDIS_URL` | Optional shared rate limits / lockout; `docker compose --profile redis` |
+| `CORS_ALLOWED_ORIGINS` | No `*` |
 
 ## API (`/api/v1`)
 
 | Area | Endpoints |
 |------|-----------|
 | Health | `GET /healthz`, `GET /readyz` |
-| Auth | `POST /api/v1/auth/register`, `POST /api/v1/auth/login` (sets HttpOnly session cookie), `POST /api/v1/auth/logout`, `POST /api/v1/auth/refresh` |
-| Auth (service / bridge) | `POST /api/v1/auth/token` (client credentials), `POST /api/v1/auth/bootstrap` (temporary; Origin allowlist + deprecation metadata in `data.bootstrap`) |
-| Users | `GET`/`POST /api/v1/users`, `GET /api/v1/users/search?name=`, `GET`/`PUT`/`DELETE /api/v1/users/:id` — **Bearer JWT or session cookie** (`DELETE` → 204) |
+| Auth | `POST .../auth/register`, `login`, `logout`, `refresh` (cookie session) |
+| Service | `POST .../auth/token`, `.../auth/bootstrap` (temporary bridge) |
+| Users | CRUD + `/users/search` — **session cookie or Bearer JWT** |
 
-JSON envelope: success `{ data, meta.request_id }`; errors `{ error: { code, message, details }, meta }`. Examples: `VALIDATION_ERROR`, `NOT_FOUND`, `UNAUTHORIZED`, `INTERNAL_ERROR`, `RATE_LIMITED`, `CONFLICT`. Unversioned `/api/...` (outside `/api/v1`) → **410 Gone**. SPA base URL/config: [`client/src/environments/environment.ts`](client/src/environments/environment.ts).
+Responses: `{ data, meta }` or `{ error, meta }`. Old `/api/...` outside v1 → **410**. SPA config: [`client/src/environments/environment.ts`](client/src/environments/environment.ts).
 
-Auth: [docs/auth-session.md](docs/auth-session.md) · Admin UI scope: [docs/platform-admin-ui.md](docs/platform-admin-ui.md) · Bootstrap sunset: [docs/bootstrap-sunset.md](docs/bootstrap-sunset.md) · Desktop: [docs/desktop-auth-bridge.md](docs/desktop-auth-bridge.md) · JWT rotation: [docs/jwt-rotation.md](docs/jwt-rotation.md).
+**Docs:** [docs/README.md](docs/README.md) · **Roadmap / suite:** [docs/MASTER_PLAN.md](docs/MASTER_PLAN.md)
 
 ## Tests and CI
 
-- **Unit (needs Go):** `cd go_CRUD_api && go test ./...`
-- **Smoke (stack + migrate running):** `./scripts/test.ps1` · helper: `./scripts/migrate.ps1`
-
-Workflow: [`.github/workflows/ci.yml`](.github/workflows/ci.yml) — unit tests and Compose smoke in parallel; BuildKit + [GHA cache](https://docs.docker.com/build/cache/backends/gha/) via [`docker-compose.ci.yml`](docker-compose.ci.yml) on push / same-repo PRs.
+- `cd go_CRUD_api && go test ./...`
+- Smoke: `./scripts/test.ps1` (stack up) · `./scripts/migrate.ps1`
+- [`.github/workflows/ci.yml`](.github/workflows/ci.yml) — tests + Compose smoke; cache via [`docker-compose.ci.yml`](docker-compose.ci.yml)
 
 ## Production
 
-Strong `JWT_SECRET`; rotate `PLATFORM_CLIENT_*` if leaked; TLS in front; **`SESSION_COOKIE_SECURE=true`** behind HTTPS; keep MySQL private; bump `MIGRATION_EXPECTED_VERSION` after deploys; run migrations before new app replicas; tight `CORS_ALLOWED_ORIGINS`; aggregate logs; disable bootstrap (`AUTH_BOOTSTRAP_ENABLED=false`) when all clients use cookie login.
+Strong secrets; TLS in front; **`SESSION_COOKIE_SECURE=true`**; private MySQL; migrate before new replicas; tight CORS; **`AUTH_BOOTSTRAP_ENABLED=false`** when unused. **Multi-replica:** set **`REDIS_URL`** (or edge limits) so rate limits / lockout aren’t per-process only — [auth-session.md](docs/auth-session.md).
 
-**Multiple API replicas:** backend rate limits and login lockout are **per-process memory** only—use an edge proxy or Redis-backed limits if you scale the API horizontally ([`docs/auth-session.md`](docs/auth-session.md)).
+## More
 
-## Migrations and troubleshooting
-
-- Guide: [`docs/migrations.md`](docs/migrations.md)
-- Windows: if Docker errors on the engine socket, start Docker Desktop.
-- `/readyz` stuck: run migrations; match `MIGRATION_EXPECTED_VERSION` to the DB; check `schema_migrations` for `dirty = 1`.
+- Migrations: [docs/migrations.md](docs/migrations.md)
+- Docker Desktop must be running on Windows

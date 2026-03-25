@@ -153,7 +153,7 @@ func TestLoginSetsSessionAndUsersAcceptsCookie(t *testing.T) {
 	r2 := gin.New()
 	r2.Use(requestid.Middleware())
 	u := r2.Group("/api/v1/users")
-	u.Use(middleware.BearerOrSession(ts, store, "gl_session"))
+	u.Use(middleware.BearerOrSession(ts, store, "gl_session", nil))
 	u.GET("", GetUsers)
 
 	req2 := httptest.NewRequest(http.MethodGet, "/api/v1/users", nil)
@@ -222,7 +222,7 @@ func TestCookiePOSTUsersWithoutCSRFIsForbidden(t *testing.T) {
 	r.Use(middleware.CSRFCookieProtect(cfg))
 	v1 := r.Group("/api/v1")
 	u := v1.Group("/users")
-	u.Use(middleware.BearerOrSession(ts, store, "gl_session"))
+	u.Use(middleware.BearerOrSession(ts, store, "gl_session", nil))
 	u.POST("", CreateUser)
 
 	sess := "abcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcd"

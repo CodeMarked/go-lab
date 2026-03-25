@@ -23,4 +23,8 @@ This allows a rolling restart: deploy new config, wait for old JWTs to expire (�
 ## Limits
 
 - Only **one** previous secret is supported (not a full JWKS).
-- For asymmetric signing (RS256) or multiple active kids, plan a separate change (P1+).
+- **OIDC / Auth0** access tokens use the issuer’s JWKS, not this rotation flow—see [oidc-auth0.md](oidc-auth0.md).
+
+## Related
+
+- [README.md](README.md) — documentation index.
