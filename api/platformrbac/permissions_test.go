@@ -18,6 +18,18 @@ func TestHasPermissionSupport(t *testing.T) {
 	if HasPermission([]string{"support"}, PermSecurityWrite) {
 		t.Fatal("support must not get security.write")
 	}
+	if !HasPermission([]string{"support"}, PermBackupsRestoreRequest) {
+		t.Fatal("support should request restores")
+	}
+	if HasPermission([]string{"support"}, PermBackupsRestoreApprove) {
+		t.Fatal("support must not approve restores by default")
+	}
+	if !HasPermission([]string{"security_admin"}, PermBackupsRestoreApprove) {
+		t.Fatal("security_admin should approve restores")
+	}
+	if !HasPermission([]string{"security_admin"}, PermBackupsRestoreFulfill) {
+		t.Fatal("security_admin should fulfill restores")
+	}
 }
 
 func TestHasPermissionSecurityAdmin(t *testing.T) {

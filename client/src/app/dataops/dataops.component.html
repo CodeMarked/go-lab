@@ -1,6 +1,111 @@
 <section class="panel">
   <h2>DataOps</h2>
-  <p class="hint">Backup / restore visibility (Phase A stub). Requires <code>backups.read</code>.</p>
-  <pre class="mono" *ngIf="data !== null">{{ data | json }}</pre>
-  <p *ngIf="data === null" class="hint">Loading or unavailable…</p>
+  <p class="hint">
+    Phase C restore <strong>governance</strong>: approval workflow in DB; physical backup/restore stays operator-run out of band.
+    See <code>docs/phase-c-split-host-operations.md</code>.
+  </p>
+
+  <p *ngIf="loadError" class="warn">
+    Some DataOps data failed to load (403 = missing <code>backups.read</code> or not signed in). Refresh after granting roles.
+  </p>
+
+  <div class="toolbar">
+    <button type="button" class="btn" (click)="refreshAll()">Refresh all</button>
+  </div>
+
+  <div *ngIf="me" class="card">
+    <h3>Your access</h3>
+    <p class="mono small">User {{ me.user_id }} · roles: {{ me.roles.join(', ') || '—' }}</p>
+    <p class="mono small">Effective permissions: {{ me.effective_permissions.join(', ') || '—' }}</p>
+  </div>
+
+  <div *ngIf="status" class="card">
+    <h3>Workflow status</h3>
+    <ul class="kv">
+      <li><span>Pending</span> {{ status.pending_restore_requests }}</li>
+      <li><span>Approved (awaiting fulfill)</span> {{ status.approved_awaiting_fulfillment }}</li>
+    </ul>
+    <p class="hint small">{{ status.note }}</p>
+  </div>
+
+  <div *ngIf="canRequestRestore" class="card">
+    <h3>New restore request</h3>
+    <p class="hint">Requires <code>backups.restore.request</code> and header <code>X-Platform-Action-Reason</code> (≥ 10 chars).</p>
+    <label>
+      Scope (max 64)
+      <input class="input" name="scope" [(ngModel)]="newScope" maxlength="64" />
+    </label>
+    <label>
+      Restore point label (max 256)
+      <input class="input" name="rp" [(ngModel)]="newRestorePoint" maxlength="256" />
+    </label>
+    <label>
+      Reason (audit / header)
+      <textarea class="input" name="cr" rows="2" [(ngModel)]="createReason"></textarea>
+    </label>
+    <button
+      type="button"
+      class="btn primary"
+      [disabled]="newScope.trim().length === 0 || newRestorePoint.trim().length === 0 || createReason.trim().length < 10"
+      (click)="submitCreate()"
+    >
+      Submit request
+    </button>
+  </div>
+
+  <div *ngIf="canSeeBackups && list" class="card">
+    <h3>Restore requests</h3>
+    <div class="row">
+      <label class="inline">
+        Filter status
+        <select class="input" [(ngModel)]="statusFilter" (change)="refreshList()">
+          <option value="">(all)</option>
+          <option value="pending">pending</option>
+          <option value="approved">approved</option>
+          <option value="rejected">rejected</option>
+          <option value="fulfilled">fulfilled</option>
+          <option value="cancelled">cancelled</option>
+        </select>
+      </label>
+      <button type="button" class="btn" (click)="refreshList()">Apply filter</button>
+    </div>
+
+    <label>
+      Action reason (for Approve / Reject / Fulfill / Cancel below — ≥ 10 chars)
+      <textarea class="input" rows="2" [(ngModel)]="actionReason"></textarea>
+    </label>
+
+    <div class="table-wrap">
+      <table class="grid">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Status</th>
+            <th>Scope</th>
+            <th>Restore point</th>
+            <th>Requester</th>
+            <th>Updated</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of list.items; trackBy: trackById">
+            <td class="mono">{{ row.id }}</td>
+            <td>{{ row.status }}</td>
+            <td>{{ row.scope }}</td>
+            <td>{{ row.restore_point_label }}</td>
+            <td>{{ row.requested_by_user_id }}</td>
+            <td class="mono small">{{ row.updated_at }}</td>
+            <td class="actions">
+              <button *ngIf="canApproveRow(row)" type="button" class="btn sm" (click)="doApprove(row)">Approve</button>
+              <button *ngIf="canRejectRow(row)" type="button" class="btn sm" (click)="doReject(row)">Reject</button>
+              <button *ngIf="canCancelRow(row)" type="button" class="btn sm" (click)="doCancel(row)">Cancel</button>
+              <button *ngIf="canFulfillRow(row)" type="button" class="btn sm" (click)="doFulfill(row)">Fulfill</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="hint small" *ngIf="list.items.length === 0">No rows (or empty filter).</p>
+  </div>
 </section>

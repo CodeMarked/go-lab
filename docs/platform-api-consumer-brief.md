@@ -13,7 +13,7 @@
 ## Base URL and versioning
 
 - All product JSON routes are under **`/api/v1`**.
-- Health checks: **`/healthz`** (liveness) and **`/readyz`** (database and optional migration version).
+- Health checks: **`/healthz`** (liveness) and **`/readyz`** (database and optional migration version). When **`MIGRATION_EXPECTED_VERSION`** is set, **`/readyz`** 200 responses include **`migration_version`** and **`migration_expected_min`** ([migrations.md](migrations.md)).
 - Deployments supply the host (for example `https://api.example.com`). Clients should configure a **base URL** and append paths from this document or from OpenAPI.
 - **Legacy paths:** requests under `/api/` that are not under `/api/v1` receive **410 Gone**. Clients must use `/api/v1` only.
 
@@ -70,6 +70,15 @@ Use [openapi.yaml](openapi.yaml) for request and response bodies and security re
 | usersUpdate | PUT | `/api/v1/users/{id}` | **Human user only** |
 | usersDelete | DELETE | `/api/v1/users/{id}` | **Human user only** |
 | platformEconomyLedgerList | GET | `/api/v1/economy/ledger` | Admin / ops (`economy.read`, human subject); read-only operator ledger |
+| platformBackupsStatus | GET | `/api/v1/backups/status` | Ops (`backups.read`); restore workflow counts |
+| platformBackupsRestoreRequestsList | GET | `/api/v1/backups/restore-requests` | Ops (`backups.read`) |
+| platformBackupsRestoreRequestCreate | POST | `/api/v1/backups/restore-requests` | Ops (`backups.restore.request` + reason header) |
+| platformBackupsRestoreRequestApprove | POST | `/api/v1/backups/restore-requests/{id}/approve` | Ops (`backups.restore.approve` + reason); not the requester |
+| platformBackupsRestoreRequestReject | POST | `/api/v1/backups/restore-requests/{id}/reject` | Ops (`backups.restore.approve` + reason) |
+| platformBackupsRestoreRequestFulfill | POST | `/api/v1/backups/restore-requests/{id}/fulfill` | Ops (`backups.restore.fulfill` + reason); after out-of-band restore |
+| platformBackupsRestoreRequestCancel | POST | `/api/v1/backups/restore-requests/{id}/cancel` | Requester (`backups.restore.request` + reason) |
+
+Physical backup/restore execution is **not** performed by these routes — see [phase-c-split-host-operations.md](phase-c-split-host-operations.md).
 
 ---
 

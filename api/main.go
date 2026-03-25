@@ -132,6 +132,7 @@ func setupRouter(cfg *config.Config, oidc *auth.OIDC) *gin.Engine {
 		csrfGetLim := middleware.NewFixedWindowLimiter("auth_csrf", 60, "too many csrf requests")
 		changePwdLim := middleware.NewFixedWindowLimiter("auth_change_password", 10, "too many password change attempts")
 		supportAckLim := middleware.NewFixedWindowLimiter("support_ack", 30, "too many support ack requests")
+		backupRestoreMutLim := middleware.NewFixedWindowLimiter("backup_restore_mut", 60, "too many backup restore workflow requests")
 
 		v1.POST("/auth/register", registerLim, myhandlers.RegisterUser(cfg))
 		v1.POST("/auth/login", loginLim, myhandlers.LoginUser(cfg))
@@ -179,7 +180,30 @@ func setupRouter(cfg *config.Config, oidc *auth.OIDC) *gin.Engine {
 				myhandlers.ListCharactersStub)
 			cp.GET("/backups/status",
 				middleware.RequirePlatformPermission(myhandlers.AuthStore, platformrbac.PermBackupsRead),
-				myhandlers.GetBackupsStatusStub)
+				myhandlers.GetBackupsStatus)
+			cp.GET("/backups/restore-requests",
+				middleware.RequirePlatformPermission(myhandlers.AuthStore, platformrbac.PermBackupsRead),
+				myhandlers.ListBackupRestoreRequests)
+			cp.POST("/backups/restore-requests", backupRestoreMutLim,
+				middleware.RequirePlatformPermission(myhandlers.AuthStore, platformrbac.PermBackupsRestoreRequest),
+				middleware.RequirePlatformActionReason(10),
+				myhandlers.PostBackupRestoreRequest)
+			cp.POST("/backups/restore-requests/:id/approve", backupRestoreMutLim,
+				middleware.RequirePlatformPermission(myhandlers.AuthStore, platformrbac.PermBackupsRestoreApprove),
+				middleware.RequirePlatformActionReason(10),
+				myhandlers.PostBackupRestoreApprove)
+			cp.POST("/backups/restore-requests/:id/reject", backupRestoreMutLim,
+				middleware.RequirePlatformPermission(myhandlers.AuthStore, platformrbac.PermBackupsRestoreApprove),
+				middleware.RequirePlatformActionReason(10),
+				myhandlers.PostBackupRestoreReject)
+			cp.POST("/backups/restore-requests/:id/fulfill", backupRestoreMutLim,
+				middleware.RequirePlatformPermission(myhandlers.AuthStore, platformrbac.PermBackupsRestoreFulfill),
+				middleware.RequirePlatformActionReason(10),
+				myhandlers.PostBackupRestoreFulfill)
+			cp.POST("/backups/restore-requests/:id/cancel", backupRestoreMutLim,
+				middleware.RequirePlatformPermission(myhandlers.AuthStore, platformrbac.PermBackupsRestoreRequest),
+				middleware.RequirePlatformActionReason(10),
+				myhandlers.PostBackupRestoreCancel)
 			cp.GET("/security/me",
 				middleware.RequirePlatformPermission(myhandlers.AuthStore, platformrbac.PermSecurityRead),
 				myhandlers.GetSecurityMeRoles)

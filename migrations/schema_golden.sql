@@ -111,6 +111,35 @@ CREATE TABLE `auth_sessions` (
   CONSTRAINT `fk_auth_sessions_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `backup_restore_requests`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `backup_restore_requests` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `requested_by_user_id` int NOT NULL,
+  `scope` varchar(64) NOT NULL,
+  `restore_point_label` varchar(256) NOT NULL,
+  `reason` text NOT NULL,
+  `status` varchar(32) NOT NULL DEFAULT 'pending',
+  `rejection_reason` text,
+  `approval_1_user_id` int DEFAULT NULL,
+  `approval_1_at` timestamp NULL DEFAULT NULL,
+  `approval_2_user_id` int DEFAULT NULL,
+  `approval_2_at` timestamp NULL DEFAULT NULL,
+  `fulfilled_at` timestamp NULL DEFAULT NULL,
+  `fulfilled_note` text,
+  `request_id` varchar(128) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_backup_restore_status` (`status`),
+  KEY `idx_backup_restore_requested_by` (`requested_by_user_id`),
+  KEY `idx_backup_restore_created` (`created_at`),
+  CONSTRAINT `fk_backup_restore_approval_1` FOREIGN KEY (`approval_1_user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_backup_restore_approval_2` FOREIGN KEY (`approval_2_user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_backup_restore_requested_by` FOREIGN KEY (`requested_by_user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `economy_ledger_events`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;

@@ -15,6 +15,8 @@ info:
     **Phase A control plane**: `GET /players`, `GET /characters`, `GET /backups/status`, `GET /security/me`, `GET /audit/admin-events`, and `POST /support/ack` require a **human** subject plus a **database** platform role (`user_platform_roles` → `platform_roles`; see `docs/platform-operator-roles.md`). Insufficient permissions return 403. `POST /support/ack` requires header **`X-Platform-Action-Reason`** (minimum length enforced server-side).
 
     **Phase B (read-only)**: `GET /economy/ledger` requires permission `economy.read` and a human subject. Query filters: `limit` (1–100, default 50), optional `before_id`, `platform_user_id`, `event_type`, `from`, `to` (RFC3339).
+
+    **Phase C (DataOps governance)**: `GET /backups/status` and `GET /backups/restore-requests` require `backups.read`. Restore workflow mutations require `backups.restore.request` (create, cancel) or `backups.restore.approve` (approve, reject) or `backups.restore.fulfill` (fulfill after out-of-band restore). Two **distinct** approvers are required; neither may be the requester. Mutating routes require header **`X-Platform-Action-Reason`** (min length enforced). Physical backup/restore execution remains operator-owned.
   version: 0.1.0
 
 servers:
@@ -553,9 +555,9 @@ paths:
   /api/v1/backups/status:
     get:
       tags: [platform]
-      summary: Backup status (Phase A stub)
+      summary: Backup / restore workflow status
       operationId: platformBackupsStatus
-      description: Requires platform permission `backups.read` and human subject.
+      description: Requires platform permission `backups.read` and human subject. Returns restore-request counts (Phase C); physical backups are out of band.
       security:
         - bearerAuth: []
         - sessionCookie: []
@@ -565,11 +567,243 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/EnvelopeObject"
+                $ref: "#/components/schemas/EnvelopeBackupsStatus"
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "403":
           $ref: "#/components/responses/ForbiddenError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/backups/restore-requests:
+    get:
+      tags: [platform]
+      summary: List backup restore requests
+      operationId: platformBackupsRestoreRequestsList
+      description: Requires `backups.read` and human subject. Newest first.
+      security:
+        - bearerAuth: []
+        - sessionCookie: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by status (`pending`, `approved`, `rejected`, `fulfilled`, `cancelled`).
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeBackupRestoreList"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      tags: [platform]
+      summary: Create a pending backup restore request
+      operationId: platformBackupsRestoreRequestCreate
+      description: Requires `backups.restore.request`, human subject, and `X-Platform-Action-Reason`. CSRF applies when using session cookie.
+      security:
+        - bearerAuth: []
+        - sessionCookie: []
+      parameters:
+        - name: X-Platform-Action-Reason
+          in: header
+          required: true
+          schema:
+            type: string
+            minLength: 10
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BackupRestoreRequestCreateBody"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeBackupRestoreCreate"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "429":
+          $ref: "#/components/responses/RateLimitedError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/backups/restore-requests/{id}/approve:
+    post:
+      tags: [platform]
+      summary: Approve a restore request (first or second slot)
+      operationId: platformBackupsRestoreRequestApprove
+      description: Requires `backups.restore.approve`. Requester cannot approve. Two distinct approvers required before status becomes `approved`.
+      security:
+        - bearerAuth: []
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/RestoreRequestId"
+        - name: X-Platform-Action-Reason
+          in: header
+          required: true
+          schema:
+            type: string
+            minLength: 10
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeBackupRestoreIdStatus"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "409":
+          $ref: "#/components/responses/ConflictError"
+        "429":
+          $ref: "#/components/responses/RateLimitedError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/backups/restore-requests/{id}/reject:
+    post:
+      tags: [platform]
+      summary: Reject a pending restore request
+      operationId: platformBackupsRestoreRequestReject
+      description: Requires `backups.restore.approve`. Requester must use cancel instead.
+      security:
+        - bearerAuth: []
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/RestoreRequestId"
+        - name: X-Platform-Action-Reason
+          in: header
+          required: true
+          schema:
+            type: string
+            minLength: 10
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeBackupRestoreIdStatus"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "409":
+          $ref: "#/components/responses/ConflictError"
+        "429":
+          $ref: "#/components/responses/RateLimitedError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/backups/restore-requests/{id}/fulfill:
+    post:
+      tags: [platform]
+      summary: Mark an approved restore request fulfilled
+      operationId: platformBackupsRestoreRequestFulfill
+      description: Requires `backups.restore.fulfill`. Use after operators complete restore out of band. Reason header documents completion note.
+      security:
+        - bearerAuth: []
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/RestoreRequestId"
+        - name: X-Platform-Action-Reason
+          in: header
+          required: true
+          schema:
+            type: string
+            minLength: 10
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeBackupRestoreIdStatus"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "409":
+          $ref: "#/components/responses/ConflictError"
+        "429":
+          $ref: "#/components/responses/RateLimitedError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/backups/restore-requests/{id}/cancel:
+    post:
+      tags: [platform]
+      summary: Cancel a pending restore request (requester only)
+      operationId: platformBackupsRestoreRequestCancel
+      description: Requires `backups.restore.request` and human subject matching the original requester.
+      security:
+        - bearerAuth: []
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/RestoreRequestId"
+        - name: X-Platform-Action-Reason
+          in: header
+          required: true
+          schema:
+            type: string
+            minLength: 10
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeBackupRestoreIdStatus"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "409":
+          $ref: "#/components/responses/ConflictError"
+        "429":
+          $ref: "#/components/responses/RateLimitedError"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -748,6 +982,14 @@ components:
       required: true
       schema:
         type: integer
+        minimum: 1
+    RestoreRequestId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
         minimum: 1
 
   responses:
@@ -1340,5 +1582,163 @@ components:
       properties:
         data:
           $ref: "#/components/schemas/SupportAckData"
+        meta:
+          $ref: "#/components/schemas/Meta"
+
+    BackupsStatusData:
+      type: object
+      required:
+        - restore_workflow_enabled
+        - pending_restore_requests
+        - approved_awaiting_fulfillment
+        - counts_by_status
+        - note
+      properties:
+        restore_workflow_enabled:
+          type: boolean
+        pending_restore_requests:
+          type: integer
+          format: int64
+        approved_awaiting_fulfillment:
+          type: integer
+          format: int64
+        counts_by_status:
+          type: object
+          additionalProperties:
+            type: integer
+            format: int64
+        note:
+          type: string
+        permissions:
+          type: array
+          items:
+            type: string
+
+    EnvelopeBackupsStatus:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/BackupsStatusData"
+        meta:
+          $ref: "#/components/schemas/Meta"
+
+    BackupRestoreRequest:
+      type: object
+      required:
+        - id
+        - created_at
+        - updated_at
+        - requested_by_user_id
+        - scope
+        - restore_point_label
+        - reason
+        - status
+      properties:
+        id:
+          type: integer
+          format: int64
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        requested_by_user_id:
+          type: integer
+        scope:
+          type: string
+        restore_point_label:
+          type: string
+        reason:
+          type: string
+        status:
+          type: string
+        rejection_reason:
+          type: string
+        approval_1_user_id:
+          type: integer
+        approval_1_at:
+          type: string
+          format: date-time
+        approval_2_user_id:
+          type: integer
+        approval_2_at:
+          type: string
+          format: date-time
+        fulfilled_at:
+          type: string
+          format: date-time
+        fulfilled_note:
+          type: string
+        request_id:
+          type: string
+
+    BackupRestoreListData:
+      type: object
+      required: [items, limit]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/BackupRestoreRequest"
+        limit:
+          type: integer
+
+    EnvelopeBackupRestoreList:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/BackupRestoreListData"
+        meta:
+          $ref: "#/components/schemas/Meta"
+
+    BackupRestoreRequestCreateBody:
+      type: object
+      required: [scope, restore_point_label]
+      properties:
+        scope:
+          type: string
+          maxLength: 64
+        restore_point_label:
+          type: string
+          maxLength: 256
+
+    BackupRestoreCreateData:
+      type: object
+      required: [id, status]
+      properties:
+        id:
+          type: integer
+          format: int64
+        status:
+          type: string
+
+    EnvelopeBackupRestoreCreate:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/BackupRestoreCreateData"
+        meta:
+          $ref: "#/components/schemas/Meta"
+
+    BackupRestoreIdStatusData:
+      type: object
+      required: [id, status]
+      properties:
+        id:
+          type: integer
+          format: int64
+        status:
+          type: string
+
+    EnvelopeBackupRestoreIdStatus:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/BackupRestoreIdStatusData"
         meta:
           $ref: "#/components/schemas/Meta"

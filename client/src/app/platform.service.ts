@@ -5,6 +5,13 @@ import { catchError, map, tap } from 'rxjs/operators';
 import { environment } from '../environments/environment';
 import { ApiEnvelope } from './api-envelope';
 import { EconomyLedgerListData } from './economy/economy.models';
+import {
+  BackupRestoreCreateData,
+  BackupRestoreIdStatus,
+  BackupRestoreListData,
+  BackupsStatusData,
+  SecurityMeData
+} from './dataops/dataops.models';
 import { MessageService } from './message.service';
 
 /** Must match api/middleware/privileged.go */
@@ -37,11 +44,85 @@ export class PlatformService {
     );
   }
 
-  getBackupsStatus(): Observable<unknown> {
-    return this.http.get<ApiEnvelope<unknown>>(`${this.base}/backups/status`).pipe(
+  /** GET /backups/status — requires backups.read */
+  getBackupsStatus(): Observable<BackupsStatusData | null> {
+    return this.http.get<ApiEnvelope<BackupsStatusData>>(`${this.base}/backups/status`).pipe(
       map((e) => e.data),
       tap(() => this.log('Fetched backups status')),
-      catchError(this.handleError<unknown>('getBackupsStatus', null))
+      catchError(this.handleError<BackupsStatusData | null>('getBackupsStatus', null))
+    );
+  }
+
+  /** GET /backups/restore-requests — requires backups.read */
+  listBackupRestoreRequests(filters: {
+    status?: string;
+    limit?: number;
+  }): Observable<BackupRestoreListData | null> {
+    let params = new HttpParams();
+    if (filters.status != null && filters.status.trim() !== '') {
+      params = params.set('status', filters.status.trim());
+    }
+    if (filters.limit != null && !Number.isNaN(filters.limit)) {
+      params = params.set('limit', String(filters.limit));
+    }
+    return this.http
+      .get<ApiEnvelope<BackupRestoreListData>>(`${this.base}/backups/restore-requests`, { params })
+      .pipe(
+        map((e) => e.data),
+        tap(() => this.log('Listed backup restore requests')),
+        catchError(this.handleError<BackupRestoreListData | null>('listBackupRestoreRequests', null))
+      );
+  }
+
+  /** POST /backups/restore-requests — requires backups.restore.request + reason header */
+  postBackupRestoreRequest(
+    body: { scope: string; restore_point_label: string },
+    actionReason: string
+  ): Observable<BackupRestoreCreateData | null> {
+    const headers = new HttpHeaders({
+      'Content-Type': 'application/json',
+      [PLATFORM_ACTION_REASON_HEADER]: actionReason
+    });
+    return this.http
+      .post<ApiEnvelope<BackupRestoreCreateData>>(`${this.base}/backups/restore-requests`, body, {
+        headers
+      })
+      .pipe(
+        map((e) => e.data),
+        tap(() => this.log('Created backup restore request')),
+        catchError(this.handleError<BackupRestoreCreateData | null>('postBackupRestoreRequest', null))
+      );
+  }
+
+  postBackupRestoreApprove(id: number, actionReason: string): Observable<BackupRestoreIdStatus | null> {
+    return this.postBackupRestoreAction(id, 'approve', actionReason);
+  }
+
+  postBackupRestoreReject(id: number, actionReason: string): Observable<BackupRestoreIdStatus | null> {
+    return this.postBackupRestoreAction(id, 'reject', actionReason);
+  }
+
+  postBackupRestoreFulfill(id: number, actionReason: string): Observable<BackupRestoreIdStatus | null> {
+    return this.postBackupRestoreAction(id, 'fulfill', actionReason);
+  }
+
+  postBackupRestoreCancel(id: number, actionReason: string): Observable<BackupRestoreIdStatus | null> {
+    return this.postBackupRestoreAction(id, 'cancel', actionReason);
+  }
+
+  private postBackupRestoreAction(
+    id: number,
+    suffix: 'approve' | 'reject' | 'fulfill' | 'cancel',
+    actionReason: string
+  ): Observable<BackupRestoreIdStatus | null> {
+    const headers = new HttpHeaders({
+      [PLATFORM_ACTION_REASON_HEADER]: actionReason
+    });
+    const url = `${this.base}/backups/restore-requests/${id}/${suffix}`;
+    return this.http.post<ApiEnvelope<BackupRestoreIdStatus>>(url, {}, { headers }).pipe(
+      map((e) => e.data),
+      tap(() => this.log(`Backup restore ${suffix} ok`)),
+      catchError(this.handleError<BackupRestoreIdStatus | null>(`postBackupRestore${suffix}`, null))
     );
   }
 
@@ -95,6 +176,15 @@ export class PlatformService {
       map((e) => e.data),
       tap(() => this.log('Fetched security/me')),
       catchError(this.handleError<unknown>('getSecurityMe', null))
+    );
+  }
+
+  /** Typed roles + effective_permissions for UI gating */
+  getSecurityMeTyped(): Observable<SecurityMeData | null> {
+    return this.http.get<ApiEnvelope<SecurityMeData>>(`${this.base}/security/me`).pipe(
+      map((e) => e.data),
+      tap(() => this.log('Fetched security/me')),
+      catchError(this.handleError<SecurityMeData | null>('getSecurityMeTyped', null))
     );
   }
 

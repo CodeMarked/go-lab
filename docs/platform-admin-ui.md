@@ -10,7 +10,8 @@ See repo [README](../README.md) § Platform admin: `useBootstrapAuth`, **`apiBas
 
 ## Phase A navigation (this SPA)
 
-- **Players / Characters / DataOps:** read-only JSON views; `GET` via [`platform.service.ts`](../client/src/app/platform.service.ts) with permissions enforced server-side (see [platform-control-plane.md](platform-control-plane.md)). **Economy** uses `GET /api/v1/economy/ledger` (`economy.read`).
+- **Players / Characters:** read-only JSON stubs; `GET` via [`platform.service.ts`](../client/src/app/platform.service.ts). **Economy** uses `GET /api/v1/economy/ledger` (`economy.read`).
+- **DataOps:** Phase C restore workflow UI — status + list + create/approve/reject/fulfill/cancel via `/api/v1/backups/*` (`backups.read`, `backups.restore.*`); **`X-Platform-Action-Reason`** (≥ 10 chars) on mutations. Physical restore execution is out of band ([phase-c-split-host-operations.md](phase-c-split-host-operations.md)).
 - **Security:** `GET /api/v1/security/me`; support ack **`POST /api/v1/support/ack`** with header **`X-Platform-Action-Reason`** (min length enforced server-side; UI requires ≥ 10 chars before submit).
 - **Audit:** `GET /api/v1/audit/admin-events`.
 

@@ -68,7 +68,7 @@ Self-hostable **Go API**: users, auth/session, tokens, health/readiness. **Owns:
 | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Backend**    | `api/` — Gin, `middleware/`, `auth/`, `authstore/`, `myhandlers/`                                                                                                                             |
 | **Frontend**   | `client/` — Angular admin SPA                                                                                                                                                                 |
-| **Migrations** | `migrations/` — full chain `000001`–`000006`: [migrations.md](migrations.md) |
+| **Migrations** | `migrations/` — full chain `000001`–`000007`: [migrations.md](migrations.md) |
 | **Compose**    | `docker-compose.yml` — mysql, migrate, backend, frontend; optional **`redis`** profile                                                                                                        |
 | **Docs**       | Topic guides under `docs/`; index [README.md](README.md); CI summary [ci.md](ci.md)                                                                                                           |
 | **Key env**    | See `[.env.example](../.env.example)`: `JWT_*`, `JOIN_TOKEN_TTL_SECONDS`, `DESKTOP_EXCHANGE_*`, `SESSION_*`, `OIDC_*`, `REDIS_URL`, `MIGRATION_EXPECTED_VERSION`, CSRF, platform client creds |
@@ -134,6 +134,7 @@ Topic detail: [README.md](README.md).
 | Ops secret rotation checklist                                                    | **Shipped** ([ops-secret-rotation.md](ops-secret-rotation.md))                                                                                                                                                                           |
 | Phase A control plane                                                            | **Shipped** — `000005_*`; RBAC on `/api/v1` routes in [platform-control-plane.md](platform-control-plane.md); [openapi.yaml](openapi.yaml) |
 | Phase B economy ledger (read-only)                                               | **Shipped** — `000006_*` `economy_ledger_events`; `GET /api/v1/economy/ledger` + Angular Economy page; permission `economy.read` ([platform-control-plane.md](platform-control-plane.md), [openapi.yaml](openapi.yaml)) |
+| Phase C restore governance (workflow only)                                       | **Shipped (v0)** — `000007_*` `backup_restore_requests`; `GET/POST /api/v1/backups/*` restore workflow + Angular **DataOps**; permissions `backups.restore.*`; `/readyz` exposes `migration_version` when expected version is set; physical backup/restore execution stays operator-owned ([platform-control-plane.md](platform-control-plane.md), [phase-c-split-host-operations.md](phase-c-split-host-operations.md), [openapi.yaml](openapi.yaml)) |
 
 
 ---
@@ -145,7 +146,7 @@ Topic detail: [README.md](README.md).
 | ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **A** Platform control plane foundations    | **Shipped (v0):** domain boundaries + RBAC matrix + privileged ack path + read-only stubs + Angular sections; full IA/data parity → Phase B/C ([platform-control-plane.md](platform-control-plane.md)). |
 | **B** Game operations surfaces              | **Partially shipped:** read-only economy ledger + Economy UI (`000006_*`, `economy.read`). **Next:** player/character mutations (sanctions, recovery, transfer), session/device trust, disputes/anomalies.                                                         |
-| **C** DataOps + suite integration hardening | Ship backup/restore approval flows, complete Marble/TaskStack consumer semantics, and add split-host operational hardening with contract/observability checks.                                                             |
+| **C** DataOps + suite integration hardening | **Partially shipped:** restore **request/approval** workflow + DataOps UI (`000007_*`, `backups.restore.*`); `/readyz` migration fields; runbook [phase-c-split-host-operations.md](phase-c-split-host-operations.md). **Next (suite):** Marble/TaskStack consume exchange → join-token; game-side `token_use=join` validation; optional OpenAPI↔route drift / generated clients. **Next (platform):** backup policy/run automation tied to tooling. |
 
 
 ---
@@ -158,14 +159,14 @@ Order is **default execution priority** for platform work unless you reprioritiz
 
 1. ~~**Control plane v1 boundaries (doc):**~~ **Done** — summarized in [platform-control-plane.md](platform-control-plane.md); deep ownership remains [data-ownership.md](data-ownership.md). **Extend** concrete schemas/APIs in Phase B/C.
 2. ~~**Admin IA + API alignment:**~~ **Done (v0):** Angular sections + `/api/v1` stubs documented in OpenAPI; iterate with Phase B data.
-3. **Privileged action guardrails:** reason header + request correlation + `admin_audit_events` shipped for `POST /support/ack`; extend pattern to sanctions, character recovery, restore, and credential operations in Phase B/C.
+3. **Privileged action guardrails:** reason header + audit events shipped for `POST /support/ack` and the backup-restore workflow; extend the same pattern to future sanctions, **character** recovery, and credential operations as Phase B routes land.
 4. **Suite trust follow-through:** wire Marble/TaskStack consumers to exchange → desktop Bearer → join-token path; complete game-side `token_use=join` validation + heartbeat semantics (suite-owned integration side).
 
 ### P1 — Soon after
 
 1. **RBAC extensions:** add roles/permissions and routes as Phase B surfaces ship; keep [platform-control-plane.md](platform-control-plane.md) + [`api/platformrbac/permissions.go`](../api/platformrbac/permissions.go) in sync. Baseline matrix + human-only enforcement on Phase A routes are **shipped**.
 2. **Character lifecycle workflows:** formalize restore/rename/transfer behavior, soft-delete window, and audit/event contract.
-3. **Backup/restore flows:** define policy/run/request/approval model (including high-risk two-person approval path).
+3. **Backup/restore:** **approval workflow shipped** (`000007_*`, DataOps UI, two distinct approvers). **Remaining:** optional policy/run automation, stronger integration with operator backup tooling, and any extra governance rules (scopes, templates).
 4. ~~**Economy observability baseline:**~~ **Read-only slice shipped** — `GET /api/v1/economy/ledger`, table `economy_ledger_events`, Angular Economy; extend with ingestion jobs, disputes, and anomaly hooks.
 
 ### P2 — Platform hardening (cross-cutting)

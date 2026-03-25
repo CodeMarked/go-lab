@@ -10,7 +10,7 @@
 
 | Pillar | Owns (examples) | Does **not** own |
 |--------|-------------------|------------------|
-| **Platform (go-lab)** | Login identifiers (`users`, `user_identities`), sessions, auth audit, future **entitlements** / tenancy keys tied to `users.id` | Game characters, posts, DMs, sim state, rendering |
+| **Platform (go-lab)** | Login identifiers (`users`, `user_identities`), sessions, auth audit, operator **restore governance** (`backup_restore_requests`), read-only **economy operator ledger** rows, future **entitlements** / tenancy keys tied to `users.id` | Game characters, posts, DMs, sim state, rendering |
 | **TaskStack** | Website UX data: posts, threads, notifications, workspace membership, settings that are **product-specific** | Opaque session secret state (platform); authoritative gameplay |
 | **Marble** | **Authoritative** gameplay: characters, stats, progression, inventory, in-session / in-world mail, match snapshots the sim agrees on | Platform password hashes; TaskStack social graph (unless you deliberately unify) |
 

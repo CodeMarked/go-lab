@@ -102,6 +102,9 @@ func Ready(c *gin.Context) {
 			})
 			return
 		}
+		resp := gin.H{"status": "ready", "request_id": rid, "migration_version": version, "migration_expected_min": AppConfig.MigrationExpectedVersion}
+		c.JSON(http.StatusOK, resp)
+		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"status": "ready", "request_id": rid})

@@ -4,11 +4,11 @@
 
 ## Next focus
 
-**Phase 5 (platform service) shipped:** `POST /api/v1/auth/join-token`, `POST /api/v1/auth/desktop/start`, `POST /api/v1/auth/desktop/exchange` (PKCE `code_challenge` / `code_verifier`, callback host allowlist, DB `000004_*` + failure audit buckets). Contract: [docs/openapi.yaml](docs/openapi.yaml) · flow: [docs/desktop-auth-bridge.md](docs/desktop-auth-bridge.md).
+**Phase C (platform) shipped (v0):** `000007_*` `backup_restore_requests`; `GET/POST /api/v1/backups/*` restore workflow; Angular **DataOps**; permissions `backups.restore.*`; `/readyz` exposes `migration_version` when `MIGRATION_EXPECTED_VERSION` is set. Runbook: [docs/phase-c-split-host-operations.md](docs/phase-c-split-host-operations.md). Contract: [docs/openapi.yaml](docs/openapi.yaml).
 
 **Next (suite / game–owned or cross-repo):** wire Marble/TaskStack clients to the exchange → desktop Bearer → join-token path; implement game-side validation of `token_use=join` JWTs; heartbeat / split-host playbooks. Backlog: [docs/MASTER_PLAN.md](docs/MASTER_PLAN.md) §9. Data model: [docs/data-ownership.md](docs/data-ownership.md).
 
-**Fresh DB:** `docker compose down -v` → up → `migrate`; set `MIGRATION_EXPECTED_VERSION=5` in `.env`. Example `DB_NAME` / `JWT_*` defaults live in [`.env.example`](.env.example) (`suite_platform`, `suite-platform`); align an existing `.env` when upgrading.
+**Fresh DB:** `docker compose down -v` → up → `migrate`; set **`MIGRATION_EXPECTED_VERSION=7`** in `.env`. Example defaults: [`.env.example`](.env.example).
 
 ## Rules
 

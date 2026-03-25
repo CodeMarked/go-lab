@@ -35,15 +35,6 @@ func ListCharactersStub(c *gin.Context) {
 	})
 }
 
-// GetBackupsStatusStub returns placeholder DataOps visibility until backup runners are integrated.
-func GetBackupsStatusStub(c *gin.Context) {
-	respond.OK(c, gin.H{
-		"backups_configured": false,
-		"last_run":           nil,
-		"note":               "Phase A stub; backup policy/run tables arrive in a later migration.",
-	})
-}
-
 type securityMeRolesData struct {
 	UserID               int      `json:"user_id"`
 	Roles                []string `json:"roles"`

@@ -1,6 +1,8 @@
-# Platform operator roles (Phase A)
+# Platform operator roles (Phase A + Phase C restore split)
 
 **Canonical source of truth:** rows in **`user_platform_roles`** referencing **`platform_roles`**. After migration `000005_*`, seed roles exist: `operator`, `support`, `security_admin`.
+
+**Phase C:** `support` can **request** restores (`backups.restore.request`); `security_admin` can **approve/reject** (`backups.restore.approve`) and **fulfill** (`backups.restore.fulfill`) after out-of-band work. Two **distinct** approvers are enforced in the API; neither may be the requester. See [platform-control-plane.md](platform-control-plane.md) §2–§3.
 
 **Related:** [platform-control-plane.md](platform-control-plane.md) (domain boundaries + RBAC matrix + route map) · [platform-admin-ui.md](platform-admin-ui.md) · [openapi.yaml](openapi.yaml) · [migrations.md](migrations.md)
 

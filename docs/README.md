@@ -1,6 +1,6 @@
 # Documentation
 
-**Canonical:** HTTP contract → [openapi.yaml](openapi.yaml); Phase A RBAC/routes → [platform-control-plane.md](platform-control-plane.md); migrations/readiness → [migrations.md](migrations.md); roadmap → [MASTER_PLAN.md](MASTER_PLAN.md) (**§7** shipped, **§9** backlog).
+**Canonical:** HTTP contract → [openapi.yaml](openapi.yaml); Phase A/B/C RBAC/routes → [platform-control-plane.md](platform-control-plane.md); migrations/readiness → [migrations.md](migrations.md); roadmap → [MASTER_PLAN.md](MASTER_PLAN.md) (**§7** shipped, **§9** backlog).
 
 **Also:** [CHAT_TODOS.md](../CHAT_TODOS.md) (short session notes). **Integrators:** [platform-api-consumer-brief.md](platform-api-consumer-brief.md) + OpenAPI. Optional Marble/TaskStack onboarding packs: add a folder under `docs/` when you have material and link it here (no reserved path until then).
 
@@ -20,7 +20,8 @@
 | [bootstrap-sunset.md](bootstrap-sunset.md) | Disabling bootstrap |
 | [desktop-auth-bridge.md](desktop-auth-bridge.md) | Desktop handoff (exchange + PKCE + join-token) |
 | [platform-admin-ui.md](platform-admin-ui.md) | Admin SPA |
-| [platform-control-plane.md](platform-control-plane.md) | Phase A: domain boundaries, RBAC matrix, route ↔ permission map |
+| [platform-control-plane.md](platform-control-plane.md) | Domain boundaries, RBAC matrix, route ↔ permission (Phase A–C) |
+| [phase-c-split-host-operations.md](phase-c-split-host-operations.md) | Phase C: split-host notes + restore governance vs physical backup |
 | [platform-operator-roles.md](platform-operator-roles.md) | Phase A: SQL to grant `user_platform_roles` |
 | [openapi.yaml](openapi.yaml) | Public API contract (OpenAPI 3) |
 | [tls-reverse-proxy.md](tls-reverse-proxy.md) | HTTPS, `Secure` cookie, HSTS |

@@ -3,26 +3,30 @@ package platformrbac
 
 // Permission constants for route-level checks.
 const (
-	PermPlayersRead    = "players.read"
-	PermCharactersRead = "characters.read"
-	PermBackupsRead    = "backups.read"
-	PermSecurityRead   = "security.read"
-	PermSecurityWrite  = "security.write"
-	PermAuditRead      = "audit.read"
-	PermAuditWrite     = "audit.write"
-	PermSupportAck     = "platform.support.ack"
-	PermEconomyRead    = "economy.read"
+	PermPlayersRead             = "players.read"
+	PermCharactersRead          = "characters.read"
+	PermBackupsRead             = "backups.read"
+	PermBackupsRestoreRequest   = "backups.restore.request"
+	PermBackupsRestoreApprove   = "backups.restore.approve"
+	PermBackupsRestoreFulfill   = "backups.restore.fulfill"
+	PermSecurityRead            = "security.read"
+	PermSecurityWrite           = "security.write"
+	PermAuditRead               = "audit.read"
+	PermAuditWrite              = "audit.write"
+	PermSupportAck              = "platform.support.ack"
+	PermEconomyRead             = "economy.read"
 )
 
 var rolePermissions = map[string][]string{
 	"operator": {"*"},
 	"support": {
-		PermPlayersRead, PermCharactersRead, PermBackupsRead, PermEconomyRead,
-		PermAuditRead, PermSupportAck, PermSecurityRead,
+		PermPlayersRead, PermCharactersRead, PermBackupsRead, PermBackupsRestoreRequest,
+		PermEconomyRead, PermAuditRead, PermSupportAck, PermSecurityRead,
 	},
 	"security_admin": {
 		PermSecurityRead, PermSecurityWrite, PermAuditRead, PermAuditWrite,
-		PermPlayersRead, PermEconomyRead,
+		PermPlayersRead, PermEconomyRead, PermBackupsRead,
+		PermBackupsRestoreApprove, PermBackupsRestoreFulfill,
 	},
 }
 
