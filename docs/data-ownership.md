@@ -82,5 +82,6 @@ So: human-only is **blast-radius control** for **service accounts**, not a guara
 | `characters`, `player_progress`, `inventory` | Marble | authoritative sim + persistence |
 | `auth_audit_events` | Platform | security audit |
 | `entitlements` (SKU / feature flags) | Platform (v1 sketch) | consumed by TaskStack/Marble |
+| `economy_ledger_events` (operator read model) | Platform (Phase B) | append-only copy for admin/support visibility; Marble remains authoritative for gameplay economy |
 
 Adjust names when each product’s schema is implemented; keep **ownership** stable.

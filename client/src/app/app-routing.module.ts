@@ -11,6 +11,7 @@ import { CharactersComponent } from './characters/characters.component';
 import { DataopsComponent } from './dataops/dataops.component';
 import { SecurityComponent } from './security/security.component';
 import { AuditComponent } from './audit/audit.component';
+import { EconomyComponent } from './economy/economy.component';
 
 const routes: Routes = [
   { path: 'login', component: LoginComponent },
@@ -38,6 +39,11 @@ const routes: Routes = [
   {
     path: 'characters',
     component: CharactersComponent,
+    canActivate: [AuthGuard]
+  },
+  {
+    path: 'economy',
+    component: EconomyComponent,
     canActivate: [AuthGuard]
   },
   {

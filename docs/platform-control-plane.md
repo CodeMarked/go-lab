@@ -15,6 +15,7 @@ This doc **closes Phase A planning gaps**: domain boundaries (what exists in go-
 | **character_*** | No character tables; `GET /api/v1/characters` stub | **Marble**-authoritative |
 | **session_*** (operator sense) | Login = `auth_sessions`; join/desktop = `000004_*` | Extended “session registry” UI/API = Phase B if needed |
 | **backup_*** | `GET /api/v1/backups/status` stub only | Policy/run/restore tables + workflows = **Phase C** |
+| **economy_*** (operator ledger) | `economy_ledger_events` + `GET /api/v1/economy/ledger` (read-only) | Append-only read model in platform DB; authoritative gameplay economy remains **Marble** ([data-ownership.md](data-ownership.md)); suite ingests rows out of band |
 | **audit_*** (control plane) | `admin_audit_events` (immutable rows for privileged actions) | Extend actions as Phase B/C routes ship |
 | **audit_*** (auth) | `auth_audit_events` | Existing auth security trail |
 
@@ -34,6 +35,7 @@ Permissions are string constants in [`api/platformrbac/permissions.go`](../api/p
 | `audit.read` | yes | yes | yes |
 | `audit.write` | yes | no | yes |
 | `platform.support.ack` | yes | yes | no |
+| `economy.read` | yes | yes | yes |
 
 Unknown role names grant **no** permissions.
 
@@ -50,6 +52,7 @@ All routes below use **`BearerOrSession` + `RequireHumanUser`** (subjects must b
 | GET | `/api/v1/backups/status` | `backups.read` |
 | GET | `/api/v1/security/me` | `security.read` |
 | GET | `/api/v1/audit/admin-events` | `audit.read` |
+| GET | `/api/v1/economy/ledger` | `economy.read` |
 | POST | `/api/v1/support/ack` | `platform.support.ack` + header `X-Platform-Action-Reason` (min length) |
 
 Contract: [openapi.yaml](openapi.yaml) (`platform` tag).
@@ -64,6 +67,7 @@ See [platform-operator-roles.md](platform-operator-roles.md) for `INSERT` exampl
 
 ## Phase B/C (not Phase A)
 
+- **Shipped (Phase B slice):** read-only economy ledger API + Angular **Economy** page (`economy.read`, migration `000006_*`).
 - Rich player/character **data** and **mutations** (sanctions, recovery, etc.).
 - Backup **policy/run/restore** schema and approval flows.
 - **Role assignment API/UI** (today: SQL only).

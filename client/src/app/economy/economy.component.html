@@ -1,0 +1,75 @@
+<section class="panel">
+  <h2>Economy</h2>
+  <p class="hint">
+    Read-only ledger (Phase B). Requires <code>economy.read</code> via <code>user_platform_roles</code>. Rows are
+    append-only; ingestion from Marble/suite is out of band.
+  </p>
+
+  <form class="filters" (ngSubmit)="apply()">
+    <label>
+      Limit (1–100)
+      <input type="number" name="limit" [(ngModel)]="limit" min="1" max="100" />
+    </label>
+    <label>
+      Before ID (keyset)
+      <input type="number" name="beforeId" [(ngModel)]="beforeId" min="1" placeholder="optional" />
+    </label>
+    <label>
+      Platform user ID
+      <input type="number" name="platformUserId" [(ngModel)]="platformUserId" min="1" placeholder="optional" />
+    </label>
+    <label>
+      Event type
+      <input type="text" name="eventType" [(ngModel)]="eventType" maxlength="64" placeholder="optional" />
+    </label>
+    <label>
+      From (RFC3339)
+      <input type="text" name="from" [(ngModel)]="from" placeholder="2025-01-01T00:00:00Z" />
+    </label>
+    <label>
+      To (RFC3339)
+      <input type="text" name="to" [(ngModel)]="to" placeholder="optional" />
+    </label>
+    <button type="submit">Apply filters</button>
+  </form>
+
+  <div *ngIf="data !== null && data.items.length > 0" class="table-wrap">
+    <table class="ledger">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Created</th>
+          <th>User</th>
+          <th>Event</th>
+          <th>Δ</th>
+          <th>Currency</th>
+          <th>Ref</th>
+          <th>Meta</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let row of data.items">
+          <td>{{ row.id }}</td>
+          <td>{{ row.created_at }}</td>
+          <td>{{ row.platform_user_id }}</td>
+          <td>{{ row.event_type }}</td>
+          <td>{{ row.amount_delta }}</td>
+          <td>{{ row.currency_code }}</td>
+          <td>
+            <span *ngIf="row.reference_type || row.reference_id" class="mono-inline">
+              {{ row.reference_type || '—' }} / {{ row.reference_id || '—' }}
+            </span>
+            <span *ngIf="!row.reference_type && !row.reference_id">—</span>
+          </td>
+          <td>
+            <pre class="mono-tiny" *ngIf="row.meta">{{ row.meta | json }}</pre>
+            <span *ngIf="!row.meta">—</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p *ngIf="data !== null && data.items.length === 0" class="hint">No rows match (empty ledger or filters).</p>
+  <p *ngIf="data === null" class="hint">Loading or unavailable…</p>
+</section>

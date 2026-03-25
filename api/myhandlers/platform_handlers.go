@@ -4,10 +4,12 @@ import (
 	"database/sql"
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/codemarked/go-lab/api/api"
+	"github.com/codemarked/go-lab/api/authstore"
 	"github.com/codemarked/go-lab/api/middleware"
 	"github.com/codemarked/go-lab/api/platformrbac"
 	"github.com/codemarked/go-lab/api/requestid"
@@ -135,6 +137,112 @@ func ListAdminAuditEvents(c *gin.Context) {
 		return
 	}
 	respond.OK(c, gin.H{"items": out, "limit": limit})
+}
+
+// GetEconomyLedger lists append-only economy ledger rows (Phase B read-only; newest id first).
+func GetEconomyLedger(c *gin.Context) {
+	limit := 50
+	if v := strings.TrimSpace(c.Query("limit")); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 1 || n > 100 {
+			respond.Error(c, http.StatusBadRequest, api.CodeValidation, "limit must be between 1 and 100", nil)
+			return
+		}
+		limit = n
+	}
+
+	var beforeID *int64
+	if v := strings.TrimSpace(c.Query("before_id")); v != "" {
+		n, err := strconv.ParseInt(v, 10, 64)
+		if err != nil || n < 1 {
+			respond.Error(c, http.StatusBadRequest, api.CodeValidation, "before_id must be a positive integer", nil)
+			return
+		}
+		beforeID = &n
+	}
+
+	var platformUserID *int
+	if v := strings.TrimSpace(c.Query("platform_user_id")); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 1 {
+			respond.Error(c, http.StatusBadRequest, api.CodeValidation, "platform_user_id must be a positive integer", nil)
+			return
+		}
+		platformUserID = &n
+	}
+
+	eventType := strings.TrimSpace(c.Query("event_type"))
+	if len(eventType) > 64 {
+		respond.Error(c, http.StatusBadRequest, api.CodeValidation, "event_type too long", nil)
+		return
+	}
+
+	var fromTime, toTime *time.Time
+	if v := strings.TrimSpace(c.Query("from")); v != "" {
+		t, err := time.Parse(time.RFC3339, v)
+		if err != nil {
+			respond.Error(c, http.StatusBadRequest, api.CodeValidation, "from must be RFC3339 date-time", nil)
+			return
+		}
+		fromTime = &t
+	}
+	if v := strings.TrimSpace(c.Query("to")); v != "" {
+		t, err := time.Parse(time.RFC3339, v)
+		if err != nil {
+			respond.Error(c, http.StatusBadRequest, api.CodeValidation, "to must be RFC3339 date-time", nil)
+			return
+		}
+		toTime = &t
+	}
+
+	rows, err := AuthStore.ListEconomyLedgerEvents(c.Request.Context(), authstore.EconomyLedgerQuery{
+		Limit:          limit,
+		BeforeID:       beforeID,
+		PlatformUserID: platformUserID,
+		EventType:      eventType,
+		FromTime:       fromTime,
+		ToTime:         toTime,
+	})
+	if err != nil {
+		respond.Error(c, http.StatusInternalServerError, api.CodeInternal, "failed to list economy ledger events", nil)
+		return
+	}
+
+	type ledgerItem struct {
+		ID             int64           `json:"id"`
+		CreatedAt      time.Time       `json:"created_at"`
+		PlatformUserID int             `json:"platform_user_id"`
+		EventType      string          `json:"event_type"`
+		AmountDelta    int64           `json:"amount_delta"`
+		CurrencyCode   string          `json:"currency_code"`
+		ReferenceType  *string         `json:"reference_type,omitempty"`
+		ReferenceID    *string         `json:"reference_id,omitempty"`
+		Meta           json.RawMessage `json:"meta,omitempty"`
+	}
+	items := make([]ledgerItem, 0, len(rows))
+	for _, r := range rows {
+		it := ledgerItem{
+			ID:             r.ID,
+			CreatedAt:      r.CreatedAt,
+			PlatformUserID: r.PlatformUserID,
+			EventType:      r.EventType,
+			AmountDelta:    r.AmountDelta,
+			CurrencyCode:   r.CurrencyCode,
+		}
+		if r.ReferenceType.Valid {
+			s := r.ReferenceType.String
+			it.ReferenceType = &s
+		}
+		if r.ReferenceID.Valid {
+			s := r.ReferenceID.String
+			it.ReferenceID = &s
+		}
+		if len(r.MetaJSON) > 0 {
+			it.Meta = json.RawMessage(append([]byte(nil), r.MetaJSON...))
+		}
+		items = append(items, it)
+	}
+	respond.OK(c, gin.H{"items": items, "limit": limit})
 }
 
 // SupportAckRequest is the JSON body for POST /support/ack (reason may also be sent via X-Platform-Action-Reason).

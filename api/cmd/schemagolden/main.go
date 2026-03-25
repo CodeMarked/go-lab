@@ -88,7 +88,9 @@ func findRepoRoot() string {
 
 func normalizeDump(b []byte) []byte {
 	b = bytes.ReplaceAll(b, []byte("\r\n"), []byte("\n"))
-	return autoIncRE.ReplaceAll(b, nil)
+	b = bytes.TrimPrefix(b, []byte{0xEF, 0xBB, 0xBF}) // UTF-8 BOM (e.g. Windows redirects)
+	b = autoIncRE.ReplaceAll(b, nil)
+	return bytes.TrimSpace(b)
 }
 
 // loadDotEnv sets KEY=value from the first path that exists (minimal parser; no export syntax).

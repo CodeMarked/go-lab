@@ -69,6 +69,7 @@ Use [openapi.yaml](openapi.yaml) for request and response bodies and security re
 | usersGetById | GET | `/api/v1/users/{id}` | Profile and identity linkage |
 | usersUpdate | PUT | `/api/v1/users/{id}` | **Human user only** |
 | usersDelete | DELETE | `/api/v1/users/{id}` | **Human user only** |
+| platformEconomyLedgerList | GET | `/api/v1/economy/ledger` | Admin / ops (`economy.read`, human subject); read-only operator ledger |
 
 ---
 

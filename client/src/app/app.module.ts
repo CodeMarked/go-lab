@@ -17,6 +17,7 @@ import { CharactersComponent } from './characters/characters.component';
 import { DataopsComponent } from './dataops/dataops.component';
 import { SecurityComponent } from './security/security.component';
 import { AuditComponent } from './audit/audit.component';
+import { EconomyComponent } from './economy/economy.component';
 import { AuthService } from './auth.service';
 import { AuthInterceptor } from './auth.interceptor';
 import { CredentialsInterceptor } from './credentials.interceptor';
@@ -42,7 +43,8 @@ export function authAppInit(auth: AuthService) {
     CharactersComponent,
     DataopsComponent,
     SecurityComponent,
-    AuditComponent
+    AuditComponent,
+    EconomyComponent
   ],
   imports: [BrowserModule, AppRoutingModule, FormsModule, HttpClientModule],
   providers: [

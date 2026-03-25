@@ -1,9 +1,10 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { catchError, map, tap } from 'rxjs/operators';
 import { environment } from '../environments/environment';
 import { ApiEnvelope } from './api-envelope';
+import { EconomyLedgerListData } from './economy/economy.models';
 import { MessageService } from './message.service';
 
 /** Must match api/middleware/privileged.go */
@@ -42,6 +43,51 @@ export class PlatformService {
       tap(() => this.log('Fetched backups status')),
       catchError(this.handleError<unknown>('getBackupsStatus', null))
     );
+  }
+
+  /** GET /economy/ledger — Phase B read-only; requires economy.read */
+  getEconomyLedger(filters: {
+    limit?: number;
+    platform_user_id?: number;
+    event_type?: string;
+    from?: string;
+    to?: string;
+    before_id?: number;
+  }): Observable<EconomyLedgerListData | null> {
+    let params = new HttpParams();
+    if (filters.limit != null && !Number.isNaN(filters.limit)) {
+      params = params.set('limit', String(filters.limit));
+    }
+    if (filters.platform_user_id != null && filters.platform_user_id > 0) {
+      params = params.set('platform_user_id', String(filters.platform_user_id));
+    }
+    if (filters.event_type != null && filters.event_type.trim() !== '') {
+      params = params.set('event_type', filters.event_type.trim());
+    }
+    if (filters.from != null && filters.from.trim() !== '') {
+      params = params.set('from', filters.from.trim());
+    }
+    if (filters.to != null && filters.to.trim() !== '') {
+      params = params.set('to', filters.to.trim());
+    }
+    if (filters.before_id != null && filters.before_id > 0) {
+      params = params.set('before_id', String(filters.before_id));
+    }
+    return this.http
+      .get<ApiEnvelope<EconomyLedgerListData>>(`${this.base}/economy/ledger`, { params })
+      .pipe(
+        map((e) => e.data),
+        tap(() => this.log('Fetched economy ledger')),
+        catchError((error: unknown) => {
+          if (error instanceof HttpErrorResponse && error.status === 403) {
+            this.messageService.add(
+              'PlatformService: economy ledger requires economy.read (operator/support/security_admin)'
+            );
+            return of(null);
+          }
+          return this.handleError<EconomyLedgerListData | null>('getEconomyLedger', null)(error);
+        })
+      );
   }
 
   getSecurityMe(): Observable<unknown> {

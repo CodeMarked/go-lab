@@ -111,6 +111,26 @@ CREATE TABLE `auth_sessions` (
   CONSTRAINT `fk_auth_sessions_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `economy_ledger_events`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `economy_ledger_events` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `platform_user_id` int NOT NULL,
+  `event_type` varchar(64) NOT NULL,
+  `amount_delta` bigint NOT NULL DEFAULT '0',
+  `currency_code` varchar(32) NOT NULL DEFAULT 'default',
+  `reference_type` varchar(64) DEFAULT NULL,
+  `reference_id` varchar(128) DEFAULT NULL,
+  `meta_json` json DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_economy_ledger_created` (`created_at`),
+  KEY `idx_economy_ledger_user_created` (`platform_user_id`,`created_at`),
+  KEY `idx_economy_ledger_event_type` (`event_type`),
+  CONSTRAINT `fk_economy_ledger_user` FOREIGN KEY (`platform_user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `platform_roles`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;

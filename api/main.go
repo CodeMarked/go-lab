@@ -186,6 +186,9 @@ func setupRouter(cfg *config.Config, oidc *auth.OIDC) *gin.Engine {
 			cp.GET("/audit/admin-events",
 				middleware.RequirePlatformPermission(myhandlers.AuthStore, platformrbac.PermAuditRead),
 				myhandlers.ListAdminAuditEvents)
+			cp.GET("/economy/ledger",
+				middleware.RequirePlatformPermission(myhandlers.AuthStore, platformrbac.PermEconomyRead),
+				myhandlers.GetEconomyLedger)
 			cp.POST("/support/ack", supportAckLim,
 				middleware.RequirePlatformPermission(myhandlers.AuthStore, platformrbac.PermSupportAck),
 				middleware.RequirePlatformActionReason(10),

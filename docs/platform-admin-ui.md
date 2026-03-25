@@ -2,7 +2,7 @@
 
 ## Role
 
-The Angular app under [`client/`](../client/) is an optional **operator console**: login, dashboard, user directory CRUD, and **Phase A** nav (Players, Characters, DataOps, Security, Audit) calling gated `/api/v1/*` routes. It is **not** the full suite control-plane UX — positioning vs TaskStack/Marble: [MASTER_PLAN.md](MASTER_PLAN.md), [data-ownership.md](data-ownership.md), [platform-api-consumer-brief.md](platform-api-consumer-brief.md).
+The Angular app under [`client/`](../client/) is an optional **operator console**: login, dashboard, user directory CRUD, and **Phase A/B** nav (Players, Characters, **Economy**, DataOps, Security, Audit) calling gated `/api/v1/*` routes. It is **not** the full suite control-plane UX — positioning vs TaskStack/Marble: [MASTER_PLAN.md](MASTER_PLAN.md), [data-ownership.md](data-ownership.md), [platform-api-consumer-brief.md](platform-api-consumer-brief.md).
 
 ## Configuration
 
@@ -10,7 +10,7 @@ See repo [README](../README.md) § Platform admin: `useBootstrapAuth`, **`apiBas
 
 ## Phase A navigation (this SPA)
 
-- **Players / Characters / DataOps:** read-only JSON views; `GET` via [`platform.service.ts`](../client/src/app/platform.service.ts) with permissions enforced server-side (see [platform-control-plane.md](platform-control-plane.md)).
+- **Players / Characters / DataOps:** read-only JSON views; `GET` via [`platform.service.ts`](../client/src/app/platform.service.ts) with permissions enforced server-side (see [platform-control-plane.md](platform-control-plane.md)). **Economy** uses `GET /api/v1/economy/ledger` (`economy.read`).
 - **Security:** `GET /api/v1/security/me`; support ack **`POST /api/v1/support/ack`** with header **`X-Platform-Action-Reason`** (min length enforced server-side; UI requires ≥ 10 chars before submit).
 - **Audit:** `GET /api/v1/audit/admin-events`.
 

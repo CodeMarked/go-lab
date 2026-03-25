@@ -11,12 +11,19 @@ const (
 	PermAuditRead      = "audit.read"
 	PermAuditWrite     = "audit.write"
 	PermSupportAck     = "platform.support.ack"
+	PermEconomyRead    = "economy.read"
 )
 
 var rolePermissions = map[string][]string{
-	"operator":       {"*"},
-	"support":        {PermPlayersRead, PermCharactersRead, PermBackupsRead, PermAuditRead, PermSupportAck, PermSecurityRead},
-	"security_admin": {PermSecurityRead, PermSecurityWrite, PermAuditRead, PermAuditWrite, PermPlayersRead},
+	"operator": {"*"},
+	"support": {
+		PermPlayersRead, PermCharactersRead, PermBackupsRead, PermEconomyRead,
+		PermAuditRead, PermSupportAck, PermSecurityRead,
+	},
+	"security_admin": {
+		PermSecurityRead, PermSecurityWrite, PermAuditRead, PermAuditWrite,
+		PermPlayersRead, PermEconomyRead,
+	},
 }
 
 // PermissionsForRole returns permissions granted to a role name (empty if unknown).

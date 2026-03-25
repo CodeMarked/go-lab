@@ -13,6 +13,8 @@ info:
     **Human-only operations**: `PUT` and `DELETE` on `/users/{id}` require an authenticated **end-user** subject (`user:<id>` from session or user-scoped Bearer). Subjects `client:*` (machine / client_credentials) receive 403.
 
     **Phase A control plane**: `GET /players`, `GET /characters`, `GET /backups/status`, `GET /security/me`, `GET /audit/admin-events`, and `POST /support/ack` require a **human** subject plus a **database** platform role (`user_platform_roles` → `platform_roles`; see `docs/platform-operator-roles.md`). Insufficient permissions return 403. `POST /support/ack` requires header **`X-Platform-Action-Reason`** (minimum length enforced server-side).
+
+    **Phase B (read-only)**: `GET /economy/ledger` requires permission `economy.read` and a human subject. Query filters: `limit` (1–100, default 50), optional `before_id`, `platform_user_id`, `event_type`, `from`, `to` (RFC3339).
   version: 0.1.0
 
 servers:
@@ -564,6 +566,74 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EnvelopeObject"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/economy/ledger:
+    get:
+      tags: [platform]
+      summary: Economy ledger events (read-only)
+      operationId: platformEconomyLedgerList
+      description: Requires platform permission `economy.read` and human subject. Append-only ledger rows keyed by platform user id; ingestion from suite/game is out of band.
+      security:
+        - bearerAuth: []
+        - sessionCookie: []
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: before_id
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+          description: Return rows with id strictly less than this value (keyset pagination, newest first).
+        - name: platform_user_id
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+        - name: event_type
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 64
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: Inclusive lower bound on created_at (RFC3339).
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: Inclusive upper bound on created_at (RFC3339).
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeEconomyLedgerList"
+        "400":
+          $ref: "#/components/responses/ValidationError"
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "403":
@@ -1192,6 +1262,60 @@ components:
       properties:
         data:
           $ref: "#/components/schemas/AdminAuditListData"
+        meta:
+          $ref: "#/components/schemas/Meta"
+
+    EconomyLedgerEvent:
+      type: object
+      required:
+        - id
+        - created_at
+        - platform_user_id
+        - event_type
+        - amount_delta
+        - currency_code
+      properties:
+        id:
+          type: integer
+          format: int64
+        created_at:
+          type: string
+          format: date-time
+        platform_user_id:
+          type: integer
+        event_type:
+          type: string
+        amount_delta:
+          type: integer
+          format: int64
+        currency_code:
+          type: string
+        reference_type:
+          type: string
+        reference_id:
+          type: string
+        meta:
+          description: Optional JSON object copied from stored meta_json.
+          type: object
+          additionalProperties: true
+
+    EconomyLedgerListData:
+      type: object
+      required: [items, limit]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/EconomyLedgerEvent"
+        limit:
+          type: integer
+
+    EnvelopeEconomyLedgerList:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/EconomyLedgerListData"
         meta:
           $ref: "#/components/schemas/Meta"
 
