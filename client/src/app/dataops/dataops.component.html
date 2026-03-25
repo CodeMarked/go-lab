@@ -30,7 +30,7 @@
 
   <div *ngIf="canRequestRestore" class="card">
     <h3>New restore request</h3>
-    <p class="hint">Requires <code>backups.restore.request</code> and header <code>X-Platform-Action-Reason</code> (≥ 10 chars).</p>
+    <p class="hint">Requires <code>backups.restore.request</code> and a written audit reason (same header as other platform mutations).</p>
     <label>
       Scope (max 64)
       <input class="input" name="scope" [(ngModel)]="newScope" maxlength="64" />
@@ -39,10 +39,13 @@
       Restore point label (max 256)
       <input class="input" name="rp" [(ngModel)]="newRestorePoint" maxlength="256" />
     </label>
-    <label>
-      Reason (audit / header)
-      <textarea class="input" name="cr" rows="2" [(ngModel)]="createReason"></textarea>
-    </label>
+    <app-platform-action-reason
+      [(reason)]="createReason"
+      name="dataops-create-restore"
+      label="Reason"
+      [invalidHint]="'At least 10 characters.'"
+      placeholder="Scope of restore, ticket ID, etc."
+    ></app-platform-action-reason>
     <button
       type="button"
       class="btn primary"
@@ -70,19 +73,15 @@
       <button type="button" class="btn" (click)="refreshList()">Apply filter</button>
     </div>
 
-    <label>
-      Action reason (sent as <code>X-Platform-Action-Reason</code> for each row action below)
-      <textarea
-        class="input"
-        rows="2"
-        [(ngModel)]="actionReason"
-        [class.input-warn]="!actionReasonOk && actionReason.length > 0"
-        placeholder="At least 10 characters (e.g. ticket ID + why you approve)"
-      ></textarea>
-    </label>
-    <p class="hint small" *ngIf="!actionReasonOk">
-      Approve, Reject, Fulfill, and Cancel stay disabled until this reason is at least <strong>10</strong> characters.
-    </p>
+    <app-platform-action-reason
+      [(reason)]="actionReason"
+      name="dataops-restore-actions"
+      label="Action reason"
+      [invalidHint]="
+        'Approve, reject, fulfill, and cancel stay disabled until this reason is at least 10 characters.'
+      "
+      placeholder="e.g. ticket ID and why you approve"
+    ></app-platform-action-reason>
     <p class="hint small" *ngIf="canSeeBackups && list.items.length">
       <strong>Governance:</strong> you cannot approve or reject your <em>own</em> restore request (four-eyes). Use another
       operator account, or have a colleague approve. Fulfill applies once the request is <code>approved</code> and you have

@@ -34,21 +34,19 @@ export class CasesComponent implements OnInit {
   patchStatus = '';
   patchPriority = '';
   patchAssigned = '';
-  patchReason = '';
+
+  /** Shared audit reason for all mutations on the open case (patch, note, sanction, recovery, appeal). */
+  caseActionReason = '';
 
   noteBody = '';
-  noteReason = '';
 
   sanctionType = 'warning';
   sanctionExpires = '';
-  sanctionReason = '';
 
   recoveryCharRef = '';
-  recoveryReason = '';
 
   appealOutcome: 'upheld' | 'overturned' = 'upheld';
   appealNotes = '';
-  appealReason = '';
 
   readonly permCasesRead = 'cases.read';
   readonly permCasesWrite = 'cases.write';
@@ -110,6 +108,11 @@ export class CasesComponent implements OnInit {
     return String(v).trim();
   }
 
+  /** Per-action check before sending the shared audit reason. */
+  private confirmCaseAction(actionLabel: string): boolean {
+    return window.confirm(`${actionLabel} — send the audit reason above?`);
+  }
+
   get createCaseDisabled(): boolean {
     return !this.reasonOkCreate || !this.trimStr(this.newTitle);
   }
@@ -146,6 +149,7 @@ export class CasesComponent implements OnInit {
 
   selectCase(row: OperatorCaseRow): void {
     this.selected = row;
+    this.caseActionReason = '';
     this.patchStatus = row.status;
     this.patchPriority = row.priority;
     this.patchAssigned = row.assigned_to_user_id != null ? String(row.assigned_to_user_id) : '';
@@ -160,12 +164,15 @@ export class CasesComponent implements OnInit {
     this.platform.listOperatorCaseActions(row.id).subscribe((d) => (this.actions = d));
   }
 
-  get patchReasonOk(): boolean {
-    return this.patchReason.trim().length >= 10;
+  get caseActionReasonOk(): boolean {
+    return this.caseActionReason.trim().length >= 10;
   }
 
   submitPatch(): void {
-    if (!this.selected || !this.patchReasonOk) {
+    if (!this.selected || !this.caseActionReasonOk) {
+      return;
+    }
+    if (!this.confirmCaseAction('Save case')) {
       return;
     }
     const body: {
@@ -188,11 +195,11 @@ export class CasesComponent implements OnInit {
         body.assigned_to_user_id = n;
       }
     }
-    this.platform.patchOperatorCase(this.selected.id, body, this.patchReason.trim()).subscribe((c) => {
+    this.platform.patchOperatorCase(this.selected.id, body, this.caseActionReason.trim()).subscribe((c) => {
       if (c) {
         this.messages.add(`Case ${c.id} saved.`);
         this.selected = c;
-        this.patchReason = '';
+        this.caseActionReason = '';
         this.refreshMeAndList();
         this.platform.listOperatorCaseNotes(c.id).subscribe((d) => (this.notes = d));
         this.platform.listOperatorCaseActions(c.id).subscribe((d) => (this.actions = d));
@@ -203,20 +210,23 @@ export class CasesComponent implements OnInit {
   }
 
   get noteReasonOk(): boolean {
-    return this.noteReason.trim().length >= 10 && this.noteBody.trim().length > 0;
+    return this.caseActionReasonOk && this.noteBody.trim().length > 0;
   }
 
   submitNote(): void {
     if (!this.selected || !this.noteReasonOk) {
       return;
     }
+    if (!this.confirmCaseAction('Add note')) {
+      return;
+    }
     this.platform
-      .postOperatorCaseNote(this.selected.id, { body: this.noteBody.trim() }, this.noteReason.trim())
+      .postOperatorCaseNote(this.selected.id, { body: this.noteBody.trim() }, this.caseActionReason.trim())
       .subscribe((res) => {
         if (res != null && res.id != null) {
           this.messages.add('Note added.');
           this.noteBody = '';
-          this.noteReason = '';
+          this.caseActionReason = '';
           this.platform.listOperatorCaseNotes(this.selected!.id).subscribe((d) => (this.notes = d));
         } else {
           this.messages.add("Couldn't add note. See the log below for details.");
@@ -225,11 +235,14 @@ export class CasesComponent implements OnInit {
   }
 
   get sanctionReasonOk(): boolean {
-    return this.sanctionReason.trim().length >= 10 && this.sanctionType.trim().length > 0;
+    return this.caseActionReasonOk && this.sanctionType.trim().length > 0;
   }
 
   submitSanction(): void {
     if (!this.selected || !this.sanctionReasonOk || !this.hasPerm(this.permSanctions)) {
+      return;
+    }
+    if (!this.confirmCaseAction('Record sanction')) {
       return;
     }
     const body: { sanction_type: string; expires_at?: string } = {
@@ -239,11 +252,11 @@ export class CasesComponent implements OnInit {
       body.expires_at = this.sanctionExpires.trim();
     }
     this.platform
-      .postOperatorCaseSanction(this.selected.id, body, this.sanctionReason.trim())
+      .postOperatorCaseSanction(this.selected.id, body, this.caseActionReason.trim())
       .subscribe((res) => {
         if (res?.ok) {
           this.messages.add('Sanction recorded.');
-          this.sanctionReason = '';
+          this.caseActionReason = '';
           this.platform.listOperatorCaseActions(this.selected!.id).subscribe((d) => (this.actions = d));
         } else {
           this.messages.add("Couldn't record sanction. See the log below for details.");
@@ -252,23 +265,26 @@ export class CasesComponent implements OnInit {
   }
 
   get recoveryReasonOk(): boolean {
-    return this.recoveryReason.trim().length >= 10;
+    return this.caseActionReasonOk;
   }
 
   submitRecovery(): void {
     if (!this.selected || !this.recoveryReasonOk || !this.hasPerm(this.permRecovery)) {
       return;
     }
+    if (!this.confirmCaseAction('Record recovery request')) {
+      return;
+    }
     this.platform
       .postOperatorCaseRecoveryRequest(
         this.selected.id,
         { character_ref: this.recoveryCharRef.trim() },
-        this.recoveryReason.trim()
+        this.caseActionReason.trim()
       )
       .subscribe((res) => {
         if (res?.ok) {
           this.messages.add('Recovery request recorded.');
-          this.recoveryReason = '';
+          this.caseActionReason = '';
           this.platform.listOperatorCaseActions(this.selected!.id).subscribe((d) => (this.actions = d));
         } else {
           this.messages.add("Couldn't record recovery request. See the log below for details.");
@@ -277,23 +293,26 @@ export class CasesComponent implements OnInit {
   }
 
   get appealReasonOk(): boolean {
-    return this.appealReason.trim().length >= 10;
+    return this.caseActionReasonOk;
   }
 
   submitAppeal(): void {
     if (!this.selected || !this.appealReasonOk || !this.hasPerm(this.permAppeals)) {
       return;
     }
+    if (!this.confirmCaseAction('Resolve appeal')) {
+      return;
+    }
     this.platform
       .postOperatorCaseAppealResolve(
         this.selected.id,
         { outcome: this.appealOutcome, notes: this.appealNotes.trim() },
-        this.appealReason.trim()
+        this.caseActionReason.trim()
       )
       .subscribe((res) => {
         if (res?.ok) {
           this.messages.add('Appeal resolved.');
-          this.appealReason = '';
+          this.caseActionReason = '';
           this.platform.listOperatorCaseActions(this.selected!.id).subscribe((d) => (this.actions = d));
         } else {
           this.messages.add("Couldn't resolve appeal. See the log below for details.");

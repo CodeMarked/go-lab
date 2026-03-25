@@ -1,0 +1,16 @@
+<label class="par-label">
+  {{ label }}
+  <span *ngIf="showHeaderLine" class="par-header-line">
+    · <span class="mono small">header <code>X-Platform-Action-Reason</code> (≥ {{ minLength }})</span>
+  </span>
+  <textarea
+    class="input"
+    [class.input-warn]="showWarn"
+    [name]="name"
+    [rows]="rows"
+    [placeholder]="placeholder"
+    [ngModel]="reason"
+    (ngModelChange)="onReasonInput($event)"
+  ></textarea>
+</label>
+<p class="hint small" *ngIf="invalidHint && showWarn">{{ invalidHint }}</p>

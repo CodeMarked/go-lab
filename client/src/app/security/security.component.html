@@ -8,21 +8,19 @@
 <section class="panel">
   <h3>Privileged: support acknowledgment</h3>
   <p class="hint">
-    This is a <strong>control-plane sample</strong>: support staff can record that they performed or acknowledged a
-    sensitive support action (policy, incident, customer handling) with a <strong>mandatory written reason</strong>. The API
-    writes an immutable row to <code>admin_audit_events</code> (<code>support.ack</code>) with your user id, the reason
-    header, optional message, and request metadata. It is not a ticket system; it is an <strong>audit trail</strong> so
-    later reviews can answer “who acknowledged what, and why.” Same pattern as DataOps restore mutations (reason header +
-    rate limits).
+    Sample control-plane endpoint: records an immutable <code>admin_audit_events</code> row (<code>support.ack</code>) so
+    reviews can see who acknowledged what and why. Optional body message below. Permission:
+    <code>platform.support.ack</code>.
   </p>
-  <p class="hint">
-    <code>POST /api/v1/support/ack</code> · header <code>X-Platform-Action-Reason</code> (min 10 chars) · permission
-    <code>platform.support.ack</code> (e.g. <code>operator</code> or <code>support</code> role).
-  </p>
-  <label>
-    Reason (required)
-    <textarea [(ngModel)]="ackReason" rows="3" placeholder="Why you are recording this acknowledgment"></textarea>
-  </label>
+  <p class="hint"><code>POST /api/v1/support/ack</code></p>
+  <app-platform-action-reason
+    [(reason)]="ackReason"
+    name="security-support-ack"
+    label="Reason (required)"
+    [rows]="3"
+    [invalidHint]="'At least 10 characters.'"
+    placeholder="Why you are recording this acknowledgment"
+  ></app-platform-action-reason>
   <label>
     Optional message (JSON body)
     <input type="text" [(ngModel)]="ackMessage" placeholder="Optional note" />
