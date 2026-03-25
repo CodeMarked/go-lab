@@ -1,0 +1,18 @@
+{
+  "/api": {
+    "target": "http://localhost:5000",
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "warn"
+  },
+  "/healthz": {
+    "target": "http://localhost:5000",
+    "secure": false,
+    "changeOrigin": true
+  },
+  "/readyz": {
+    "target": "http://localhost:5000",
+    "secure": false,
+    "changeOrigin": true
+  }
+}

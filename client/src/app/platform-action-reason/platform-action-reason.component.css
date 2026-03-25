@@ -1,0 +1,35 @@
+.par-label {
+  display: block;
+  margin: 0.5rem 0;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.par-header-line {
+  font-weight: 400;
+  color: #555;
+}
+.mono {
+  font-family: ui-monospace, monospace;
+}
+.mono.small {
+  font-size: 0.8rem;
+}
+.hint {
+  color: #666;
+  font-size: 0.9rem;
+}
+.hint.small {
+  font-size: 0.8rem;
+}
+.input {
+  display: block;
+  width: 100%;
+  max-width: 36rem;
+  margin-top: 0.25rem;
+  padding: 0.35rem 0.5rem;
+  box-sizing: border-box;
+}
+textarea.input.input-warn {
+  border-color: #c9a227;
+  background: #fffdf5;
+}

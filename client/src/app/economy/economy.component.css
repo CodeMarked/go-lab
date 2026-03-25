@@ -1,0 +1,58 @@
+.panel {
+  padding: 1rem 1.5rem;
+}
+.hint {
+  color: #666;
+  font-size: 0.9rem;
+}
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  align-items: flex-end;
+  margin: 1rem 0;
+}
+.filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+}
+.filters input {
+  min-width: 8rem;
+}
+.filters button {
+  align-self: flex-end;
+  padding: 0.35rem 0.75rem;
+}
+.table-wrap {
+  overflow: auto;
+  margin-top: 0.5rem;
+}
+table.ledger {
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  width: 100%;
+}
+table.ledger th,
+table.ledger td {
+  border: 1px solid #ddd;
+  padding: 0.35rem 0.5rem;
+  text-align: left;
+  vertical-align: top;
+}
+table.ledger th {
+  background: #f0f0f0;
+}
+.mono-inline {
+  font-family: ui-monospace, monospace;
+  font-size: 0.8rem;
+}
+.mono-tiny {
+  margin: 0;
+  font-family: ui-monospace, monospace;
+  font-size: 0.75rem;
+  max-width: 16rem;
+  overflow: auto;
+  white-space: pre-wrap;
+}

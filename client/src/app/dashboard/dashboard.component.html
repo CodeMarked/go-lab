@@ -1,7 +1,27 @@
-<h2>The Richest Users</h2>
-<div class="users-menu">
-  <a *ngFor="let user of users"
-    routerLink="/detail/{{user.id}}">
-    {{user.name}}
-  </a>
-</div>
+<section class="operator">
+  <h2>Operator</h2>
+  <p class="hint">Self-host API checks (opens in new tab).</p>
+  <ul class="tiles">
+    <li>
+      <a [href]="(apiBaseUrl || '') + '/healthz'" target="_blank" rel="noopener noreferrer">Health</a>
+      <span class="sub">GET /healthz</span>
+    </li>
+    <li>
+      <a [href]="apiBaseUrl + '/readyz'" target="_blank" rel="noopener noreferrer">Readiness</a>
+      <span class="sub">GET /readyz</span>
+    </li>
+    <li>
+      <span class="tile-label">API base</span>
+      <span class="sub mono">{{ apiBaseLabel }}</span>
+    </li>
+  </ul>
+</section>
+
+<section class="richest">
+  <h2>Top users (by pennies)</h2>
+  <div class="users-menu">
+    <a *ngFor="let user of users" routerLink="/detail/{{ user.id }}">
+      {{ user.name }}
+    </a>
+  </div>
+</section>

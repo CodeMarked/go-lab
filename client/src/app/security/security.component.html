@@ -1,0 +1,30 @@
+<section class="panel">
+  <h2>Security</h2>
+  <p class="hint">Your platform roles and permissions (<code>GET /api/v1/security/me</code>). Requires <code>security.read</code>.</p>
+  <pre class="mono" *ngIf="me !== null">{{ me | json }}</pre>
+  <p *ngIf="me === null" class="hint">Loading or unavailable…</p>
+</section>
+
+<section class="panel">
+  <h3>Privileged: support acknowledgment</h3>
+  <p class="hint">
+    Sample control-plane endpoint: records an immutable <code>admin_audit_events</code> row (<code>support.ack</code>) so
+    reviews can see who acknowledged what and why. Optional body message below. Permission:
+    <code>platform.support.ack</code>.
+  </p>
+  <p class="hint"><code>POST /api/v1/support/ack</code></p>
+  <app-platform-action-reason
+    [(reason)]="ackReason"
+    name="security-support-ack"
+    label="Reason (required)"
+    [rows]="3"
+    [invalidHint]="'At least 10 characters.'"
+    placeholder="Why you are recording this acknowledgment"
+  ></app-platform-action-reason>
+  <label>
+    Optional message (JSON body)
+    <input type="text" [(ngModel)]="ackMessage" placeholder="Optional note" />
+  </label>
+  <button type="button" (click)="submitAck()" [disabled]="ackReason.trim().length < 10">Submit ack</button>
+  <pre class="mono" *ngIf="ackResult !== null">{{ ackResult | json }}</pre>
+</section>

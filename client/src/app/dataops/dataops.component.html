@@ -1,0 +1,156 @@
+<section class="panel">
+  <h2>DataOps</h2>
+  <p class="hint">
+    Restore <strong>governance</strong>: approval workflow in DB; physical backup/restore stays operator-run out of band.
+    See <code>docs/split-host-operations.md</code>.
+  </p>
+
+  <p *ngIf="loadError" class="warn">
+    Some DataOps data failed to load (403 = missing <code>backups.read</code> or not signed in). Refresh after granting roles.
+  </p>
+
+  <div class="toolbar">
+    <button type="button" class="btn" (click)="refreshAll()">Refresh all</button>
+  </div>
+
+  <div *ngIf="me" class="card">
+    <h3>Your access</h3>
+    <p class="mono small">User {{ me.user_id }} · roles: {{ me.roles.join(', ') || '—' }}</p>
+    <p class="mono small">Effective permissions: {{ me.effective_permissions.join(', ') || '—' }}</p>
+  </div>
+
+  <div *ngIf="status" class="card">
+    <h3>Workflow status</h3>
+    <ul class="kv">
+      <li><span>Pending</span> {{ status.pending_restore_requests }}</li>
+      <li><span>Approved (awaiting fulfill)</span> {{ status.approved_awaiting_fulfillment }}</li>
+    </ul>
+    <p class="hint small">{{ status.note }}</p>
+  </div>
+
+  <div *ngIf="canRequestRestore" class="card">
+    <h3>New restore request</h3>
+    <p class="hint">Requires <code>backups.restore.request</code> and a written audit reason (same header as other platform mutations).</p>
+    <label>
+      Scope (max 64)
+      <input class="input" name="scope" [(ngModel)]="newScope" maxlength="64" />
+    </label>
+    <label>
+      Restore point label (max 256)
+      <input class="input" name="rp" [(ngModel)]="newRestorePoint" maxlength="256" />
+    </label>
+    <app-platform-action-reason
+      [(reason)]="createReason"
+      name="dataops-create-restore"
+      label="Reason"
+      [invalidHint]="'At least 10 characters.'"
+      placeholder="Scope of restore, ticket ID, etc."
+    ></app-platform-action-reason>
+    <button
+      type="button"
+      class="btn primary"
+      [disabled]="newScope.trim().length === 0 || newRestorePoint.trim().length === 0 || createReason.trim().length < 10"
+      (click)="submitCreate()"
+    >
+      Submit request
+    </button>
+  </div>
+
+  <div *ngIf="canSeeBackups && list" class="card">
+    <h3>Restore requests</h3>
+    <div class="row">
+      <label class="inline">
+        Filter status
+        <select class="input" [(ngModel)]="statusFilter" (change)="refreshList()">
+          <option value="">(all)</option>
+          <option value="pending">pending</option>
+          <option value="approved">approved</option>
+          <option value="rejected">rejected</option>
+          <option value="fulfilled">fulfilled</option>
+          <option value="cancelled">cancelled</option>
+        </select>
+      </label>
+      <button type="button" class="btn" (click)="refreshList()">Apply filter</button>
+    </div>
+
+    <app-platform-action-reason
+      [(reason)]="actionReason"
+      name="dataops-restore-actions"
+      label="Action reason"
+      [invalidHint]="
+        'Approve, reject, fulfill, and cancel stay disabled until this reason is at least 10 characters.'
+      "
+      placeholder="e.g. ticket ID and why you approve"
+    ></app-platform-action-reason>
+    <p class="hint small" *ngIf="canSeeBackups && list.items.length">
+      <strong>Governance:</strong> you cannot approve or reject your <em>own</em> restore request (four-eyes). Use another
+      operator account, or have a colleague approve. Fulfill applies once the request is <code>approved</code> and you have
+      <code>backups.restore.fulfill</code>.
+    </p>
+
+    <div class="table-wrap">
+      <table class="grid">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Status</th>
+            <th>Scope</th>
+            <th>Restore point</th>
+            <th>Requester</th>
+            <th>Updated</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of list.items; trackBy: trackById">
+            <td class="mono">{{ row.id }}</td>
+            <td>{{ row.status }}</td>
+            <td>{{ row.scope }}</td>
+            <td>{{ row.restore_point_label }}</td>
+            <td>{{ row.requested_by_user_id }}</td>
+            <td class="mono small">{{ row.updated_at }}</td>
+            <td class="actions">
+              <button
+                *ngIf="canApproveRow(row)"
+                type="button"
+                class="btn sm"
+                [disabled]="!actionReasonOk"
+                (click)="doApprove(row)"
+              >
+                Approve
+              </button>
+              <button
+                *ngIf="canRejectRow(row)"
+                type="button"
+                class="btn sm"
+                [disabled]="!actionReasonOk"
+                (click)="doReject(row)"
+              >
+                Reject
+              </button>
+              <button
+                *ngIf="canCancelRow(row)"
+                type="button"
+                class="btn sm"
+                [disabled]="!actionReasonOk"
+                (click)="doCancel(row)"
+              >
+                Cancel
+              </button>
+              <button
+                *ngIf="canFulfillRow(row)"
+                type="button"
+                class="btn sm"
+                [disabled]="!actionReasonOk"
+                (click)="doFulfill(row)"
+              >
+                Fulfill
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="hint small" *ngIf="list.items.length === 0">No rows (or empty filter).</p>
+  </div>
+</section>

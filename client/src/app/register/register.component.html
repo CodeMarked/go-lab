@@ -1,0 +1,21 @@
+<div class="auth-card">
+  <h1>Create account</h1>
+  <p class="muted">Self-host platform admin (go-lab).</p>
+  <form (ngSubmit)="submit()">
+    <label>
+      Display name
+      <input name="name" type="text" [(ngModel)]="name" required maxlength="100" />
+    </label>
+    <label>
+      Email
+      <input name="email" type="email" [(ngModel)]="email" required autocomplete="email" />
+    </label>
+    <label>
+      Password (min 8 characters)
+      <input name="password" type="password" [(ngModel)]="password" required minlength="8" autocomplete="new-password" />
+    </label>
+    <button type="submit" [disabled]="loading">Register</button>
+  </form>
+  <p class="error" *ngIf="errorMsg">{{ errorMsg }}</p>
+  <p><a routerLink="/login">Back to sign in</a></p>
+</div>

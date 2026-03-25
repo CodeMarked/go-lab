@@ -20,6 +20,3 @@ Thumbs.db
 
 # Local env and Go workspace artifacts
 .env
-
-# Local planning artifacts
-CHAT_TODOS.md
