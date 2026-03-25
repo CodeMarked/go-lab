@@ -11,7 +11,7 @@ Pick one of:
 - **Release tag:** e.g. disable bootstrap starting at `go-lab v0.3.0` (adjust to your versioning).
 - **Date:** e.g. “no sooner than YYYY-MM-DD after SPA ships cookie login in production.”
 
-**Audit record:** When chosen, record the milestone in [MASTER_PLAN.md](MASTER_PLAN.md) §10 (open questions / decisions) and in release notes or tags as appropriate.
+**Audit record:** When chosen, record the milestone in [MASTER_PLAN.md](MASTER_PLAN.md) §9 (open questions / decisions) and in release notes or tags as appropriate.
 
 ## Operator checklist
 

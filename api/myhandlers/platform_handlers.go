@@ -21,7 +21,7 @@ import (
 func ListPlayersStub(c *gin.Context) {
 	respond.OK(c, gin.H{
 		"items":       []any{},
-		"note":        "Phase A stub; link players to platform users via platform_user_id in suite databases.",
+		"note":        "Stub; link players to platform users via platform_user_id in suite databases.",
 		"permissions": []string{platformrbac.PermPlayersRead},
 	})
 }
@@ -30,7 +30,7 @@ func ListPlayersStub(c *gin.Context) {
 func ListCharactersStub(c *gin.Context) {
 	respond.OK(c, gin.H{
 		"items":       []any{},
-		"note":        "Phase A stub; characters are Marble-authoritative per data-ownership.md.",
+		"note":        "Stub; characters are Marble-authoritative per data-ownership.md.",
 		"permissions": []string{platformrbac.PermCharactersRead},
 	})
 }
@@ -130,7 +130,7 @@ func ListAdminAuditEvents(c *gin.Context) {
 	respond.OK(c, gin.H{"items": out, "limit": limit})
 }
 
-// GetEconomyLedger lists append-only economy ledger rows (Phase B read-only; newest id first).
+// GetEconomyLedger lists append-only economy ledger rows (read-only; newest id first).
 func GetEconomyLedger(c *gin.Context) {
 	limit := 50
 	if v := strings.TrimSpace(c.Query("limit")); v != "" {
@@ -241,7 +241,7 @@ type SupportAckRequest struct {
 	Message string `json:"message"`
 }
 
-// PostSupportAck records a privileged support acknowledgment in admin_audit_events (Phase A mutation example).
+// PostSupportAck records a privileged support acknowledgment in admin_audit_events (mutation example).
 func PostSupportAck(c *gin.Context) {
 	uid, ok := middleware.AuthUserIDFromContext(c)
 	if !ok {

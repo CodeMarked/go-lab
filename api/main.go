@@ -133,6 +133,8 @@ func setupRouter(cfg *config.Config, oidc *auth.OIDC) *gin.Engine {
 		changePwdLim := middleware.NewFixedWindowLimiter("auth_change_password", 10, "too many password change attempts")
 		supportAckLim := middleware.NewFixedWindowLimiter("support_ack", 30, "too many support ack requests")
 		backupRestoreMutLim := middleware.NewFixedWindowLimiter("backup_restore_mut", 60, "too many backup restore workflow requests")
+		caseReadLim := middleware.NewFixedWindowLimiter("operator_cases_read", 120, "too many case read requests")
+		caseMutLim := middleware.NewFixedWindowLimiter("operator_cases_mut", 60, "too many case mutation requests")
 
 		v1.POST("/auth/register", registerLim, myhandlers.RegisterUser(cfg))
 		v1.POST("/auth/login", loginLim, myhandlers.LoginUser(cfg))
@@ -217,6 +219,44 @@ func setupRouter(cfg *config.Config, oidc *auth.OIDC) *gin.Engine {
 				middleware.RequirePlatformPermission(myhandlers.AuthStore, platformrbac.PermSupportAck),
 				middleware.RequirePlatformActionReason(10),
 				myhandlers.PostSupportAck)
+
+			// Operator cases (player/character workflows; Marble applies gameplay effects out of band).
+			cp.GET("/cases", caseReadLim,
+				middleware.RequirePlatformPermission(myhandlers.AuthStore, platformrbac.PermCasesRead),
+				myhandlers.ListOperatorCases)
+			cp.POST("/cases", caseMutLim,
+				middleware.RequirePlatformPermission(myhandlers.AuthStore, platformrbac.PermCasesWrite),
+				middleware.RequirePlatformActionReason(10),
+				myhandlers.PostOperatorCase)
+			cp.GET("/cases/:id/notes", caseReadLim,
+				middleware.RequirePlatformPermission(myhandlers.AuthStore, platformrbac.PermCasesRead),
+				myhandlers.ListOperatorCaseNotes)
+			cp.POST("/cases/:id/notes", caseMutLim,
+				middleware.RequirePlatformPermission(myhandlers.AuthStore, platformrbac.PermCasesWrite),
+				middleware.RequirePlatformActionReason(10),
+				myhandlers.PostOperatorCaseNote)
+			cp.GET("/cases/:id/actions", caseReadLim,
+				middleware.RequirePlatformPermission(myhandlers.AuthStore, platformrbac.PermCasesRead),
+				myhandlers.ListOperatorCaseActions)
+			cp.POST("/cases/:id/sanctions", caseMutLim,
+				middleware.RequirePlatformPermission(myhandlers.AuthStore, platformrbac.PermSanctionsWrite),
+				middleware.RequirePlatformActionReason(10),
+				myhandlers.PostOperatorCaseSanction)
+			cp.POST("/cases/:id/recovery-requests", caseMutLim,
+				middleware.RequirePlatformPermission(myhandlers.AuthStore, platformrbac.PermRecoveryWrite),
+				middleware.RequirePlatformActionReason(10),
+				myhandlers.PostOperatorCaseRecoveryRequest)
+			cp.POST("/cases/:id/appeals/resolve", caseMutLim,
+				middleware.RequirePlatformPermission(myhandlers.AuthStore, platformrbac.PermAppealsResolve),
+				middleware.RequirePlatformActionReason(10),
+				myhandlers.PostOperatorCaseAppealResolve)
+			cp.GET("/cases/:id", caseReadLim,
+				middleware.RequirePlatformPermission(myhandlers.AuthStore, platformrbac.PermCasesRead),
+				myhandlers.GetOperatorCase)
+			cp.PATCH("/cases/:id", caseMutLim,
+				middleware.RequirePlatformPermission(myhandlers.AuthStore, platformrbac.PermCasesWrite),
+				middleware.RequirePlatformActionReason(10),
+				myhandlers.PatchOperatorCase)
 		}
 	}
 

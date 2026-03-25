@@ -13,6 +13,12 @@ import {
   SecurityMeData
 } from './dataops/dataops.models';
 import { MessageService } from './message.service';
+import {
+  OperatorCaseActionsData,
+  OperatorCaseListData,
+  OperatorCaseNotesData,
+  OperatorCaseRow
+} from './cases/cases.models';
 
 /** Must match api/middleware/privileged.go */
 export const PLATFORM_ACTION_REASON_HEADER = 'X-Platform-Action-Reason';
@@ -126,7 +132,7 @@ export class PlatformService {
     );
   }
 
-  /** GET /economy/ledger — Phase B read-only; requires economy.read */
+  /** GET /economy/ledger — read-only; requires economy.read */
   getEconomyLedger(filters: {
     limit?: number;
     platform_user_id?: number;
@@ -161,9 +167,7 @@ export class PlatformService {
         tap(() => this.log('Fetched economy ledger')),
         catchError((error: unknown) => {
           if (error instanceof HttpErrorResponse && error.status === 403) {
-            this.messageService.add(
-              'PlatformService: economy ledger requires economy.read (operator/support/security_admin)'
-            );
+            this.messageService.add("Couldn't load economy ledger (permission required).");
             return of(null);
           }
           return this.handleError<EconomyLedgerListData | null>('getEconomyLedger', null)(error);
@@ -194,6 +198,183 @@ export class PlatformService {
       tap(() => this.log('Fetched admin audit events')),
       catchError(this.handleError<unknown>('getAdminAuditEvents', null))
     );
+  }
+
+  listOperatorCases(filters: {
+    limit?: number;
+    status?: string;
+    subject_platform_user_id?: number;
+    before_id?: number;
+  }): Observable<OperatorCaseListData | null> {
+    let params = new HttpParams();
+    if (filters.limit != null && !Number.isNaN(filters.limit)) {
+      params = params.set('limit', String(filters.limit));
+    }
+    if (filters.status != null && filters.status.trim() !== '') {
+      params = params.set('status', filters.status.trim());
+    }
+    if (filters.subject_platform_user_id != null && filters.subject_platform_user_id > 0) {
+      params = params.set('subject_platform_user_id', String(filters.subject_platform_user_id));
+    }
+    if (filters.before_id != null && filters.before_id > 0) {
+      params = params.set('before_id', String(filters.before_id));
+    }
+    return this.http
+      .get<ApiEnvelope<OperatorCaseListData>>(`${this.base}/cases`, { params })
+      .pipe(
+        map((e) => e.data),
+        catchError(this.handleError<OperatorCaseListData | null>('Load cases', null))
+      );
+  }
+
+  getOperatorCase(id: number): Observable<OperatorCaseRow | null> {
+    return this.http.get<ApiEnvelope<OperatorCaseRow>>(`${this.base}/cases/${id}`).pipe(
+      map((e) => e.data),
+      catchError(this.handleError<OperatorCaseRow | null>('Load case', null))
+    );
+  }
+
+  postOperatorCase(
+    body: {
+      subject_platform_user_id: number;
+      title: string;
+      description?: string;
+      priority?: string;
+      subject_character_ref?: string;
+    },
+    actionReason: string
+  ): Observable<{ id: number; status: string } | null> {
+    const headers = new HttpHeaders({
+      'Content-Type': 'application/json',
+      [PLATFORM_ACTION_REASON_HEADER]: actionReason
+    });
+    return this.http
+      .post<ApiEnvelope<{ id: number; status: string }>>(`${this.base}/cases`, body, { headers })
+      .pipe(
+        map((e) => e.data),
+        catchError(this.handleError<{ id: number; status: string } | null>('Create case', null))
+      );
+  }
+
+  patchOperatorCase(
+    id: number,
+    body: { status?: string; priority?: string; assigned_to_user_id?: number | null },
+    actionReason: string
+  ): Observable<OperatorCaseRow | null> {
+    const headers = new HttpHeaders({
+      'Content-Type': 'application/json',
+      [PLATFORM_ACTION_REASON_HEADER]: actionReason
+    });
+    return this.http
+      .patch<ApiEnvelope<OperatorCaseRow>>(`${this.base}/cases/${id}`, body, { headers })
+      .pipe(
+        map((e) => e.data),
+        catchError(this.handleError<OperatorCaseRow | null>('Update case', null))
+      );
+  }
+
+  listOperatorCaseNotes(caseId: number): Observable<OperatorCaseNotesData | null> {
+    return this.http
+      .get<ApiEnvelope<OperatorCaseNotesData>>(`${this.base}/cases/${caseId}/notes`)
+      .pipe(
+        map((e) => e.data),
+        catchError(this.handleError<OperatorCaseNotesData | null>('Load notes', null))
+      );
+  }
+
+  postOperatorCaseNote(
+    caseId: number,
+    body: { body: string },
+    actionReason: string
+  ): Observable<{ id: number; case_id: number } | null> {
+    const headers = new HttpHeaders({
+      'Content-Type': 'application/json',
+      [PLATFORM_ACTION_REASON_HEADER]: actionReason
+    });
+    return this.http
+      .post<ApiEnvelope<{ id: number; case_id: number }>>(`${this.base}/cases/${caseId}/notes`, body, {
+        headers
+      })
+      .pipe(
+        map((e) => e.data),
+        catchError(this.handleError<{ id: number; case_id: number } | null>('Add note', null))
+      );
+  }
+
+  listOperatorCaseActions(caseId: number): Observable<OperatorCaseActionsData | null> {
+    return this.http
+      .get<ApiEnvelope<OperatorCaseActionsData>>(`${this.base}/cases/${caseId}/actions`)
+      .pipe(
+        map((e) => e.data),
+        catchError(this.handleError<OperatorCaseActionsData | null>('Load actions', null))
+      );
+  }
+
+  postOperatorCaseSanction(
+    caseId: number,
+    body: { sanction_type: string; expires_at?: string },
+    actionReason: string
+  ): Observable<{ ok: boolean; recorded: string } | null> {
+    const headers = new HttpHeaders({
+      'Content-Type': 'application/json',
+      [PLATFORM_ACTION_REASON_HEADER]: actionReason
+    });
+    return this.http
+      .post<ApiEnvelope<{ ok: boolean; recorded: string }>>(
+        `${this.base}/cases/${caseId}/sanctions`,
+        body,
+        { headers }
+      )
+      .pipe(
+        map((e) => e.data),
+        catchError(this.handleError<{ ok: boolean; recorded: string } | null>('Record sanction', null))
+      );
+  }
+
+  postOperatorCaseRecoveryRequest(
+    caseId: number,
+    body: { character_ref?: string },
+    actionReason: string
+  ): Observable<{ ok: boolean; recorded: string } | null> {
+    const headers = new HttpHeaders({
+      'Content-Type': 'application/json',
+      [PLATFORM_ACTION_REASON_HEADER]: actionReason
+    });
+    return this.http
+      .post<ApiEnvelope<{ ok: boolean; recorded: string }>>(
+        `${this.base}/cases/${caseId}/recovery-requests`,
+        body,
+        { headers }
+      )
+      .pipe(
+        map((e) => e.data),
+        catchError(
+          this.handleError<{ ok: boolean; recorded: string } | null>('Recovery request', null)
+        )
+      );
+  }
+
+  postOperatorCaseAppealResolve(
+    caseId: number,
+    body: { outcome: string; notes?: string },
+    actionReason: string
+  ): Observable<{ ok: boolean; recorded: string } | null> {
+    const headers = new HttpHeaders({
+      'Content-Type': 'application/json',
+      [PLATFORM_ACTION_REASON_HEADER]: actionReason
+    });
+    return this.http
+      .post<ApiEnvelope<{ ok: boolean; recorded: string }>>(
+        `${this.base}/cases/${caseId}/appeals/resolve`,
+        body,
+        { headers }
+      )
+      .pipe(
+        map((e) => e.data),
+        catchError(
+          this.handleError<{ ok: boolean; recorded: string } | null>('Resolve appeal', null)
+        )
+      );
   }
 
   postSupportAck(reason: string, message?: string): Observable<unknown> {
@@ -231,6 +412,6 @@ export class PlatformService {
   }
 
   private log(message: string) {
-    this.messageService.add(`PlatformService: ${message}`);
+    this.messageService.add(message);
   }
 }

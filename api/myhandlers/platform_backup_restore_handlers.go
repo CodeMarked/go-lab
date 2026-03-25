@@ -18,7 +18,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// GetBackupsStatus returns restore-request workflow counts (Phase C governance; physical backup runs are operator-owned).
+// GetBackupsStatus returns restore-request workflow counts (restore governance; physical backup runs are operator-owned).
 func GetBackupsStatus(c *gin.Context) {
 	counts, err := AuthStore.BackupRestoreStatusCounts(c.Request.Context())
 	if err != nil {

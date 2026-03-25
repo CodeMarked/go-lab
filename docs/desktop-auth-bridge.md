@@ -5,7 +5,7 @@
 - **No platform client secrets in browser bundles** (already enforced for the SPA).
 - Desktop and automation clients are **not** cookie-first; they use **Bearer JWTs** or future opaque API tokens.
 
-## Current contract (v0.1)
+## Current contract
 
 | Flow | Mechanism |
 |------|-----------|
@@ -23,7 +23,7 @@
    - Exchange failures are audit-bucketed (`code_not_found`, `code_already_used`, `code_expired`, `code_verifier_mismatch`, etc.) for incident triage.
 2. **Service and automation:** trusted processes may use `PLATFORM_CLIENT_*` with `POST /api/v1/auth/token` for machine-to-machine scenarios. Client credentials must not ship in browser bundles.
 
-## Join-token bridge (Phase 5)
+## Join-token bridge
 
 - **Implemented endpoint:** `POST /api/v1/auth/join-token` (requires authenticated **human** subject: session cookie+CSRF or user Bearer).
 - **Request body:** `{ "session_id": "..." }` (`3..128` chars).

@@ -1,4 +1,4 @@
--- Phase B: append-only economy ledger read model for operator visibility (ingestion from Marble/suite is out of band).
+-- Append-only economy ledger read model for operator visibility (ingestion from Marble/suite is out of band).
 
 CREATE TABLE IF NOT EXISTS economy_ledger_events (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,

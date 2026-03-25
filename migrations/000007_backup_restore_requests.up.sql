@@ -1,4 +1,4 @@
--- Phase C: backup restore request workflow with two distinct approvers (neither the requester).
+-- Backup restore request workflow with two distinct approvers (neither the requester).
 
 CREATE TABLE IF NOT EXISTS backup_restore_requests (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,

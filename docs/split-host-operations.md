@@ -1,10 +1,10 @@
-# Phase C — Split-host operations, observability, suite checklist
+# Split-host operations, observability, suite checklist
 
 **Audience:** operators and integrators (TaskStack, Marble). **Companion:** [platform-control-plane.md](platform-control-plane.md) (RBAC + routes), [tls-reverse-proxy.md](tls-reverse-proxy.md), [platform-api-consumer-brief.md](platform-api-consumer-brief.md).
 
 ---
 
-## 1. What Phase C adds in this repo
+## 1. What this repo covers here
 
 - **Restore governance:** `backup_restore_requests` table (`000007_*`), API under `/api/v1/backups/*`, Angular **DataOps** page. Two **distinct** human approvers (neither the requester); physical restore execution stays **out of band** (mysqldump, vendor backup, runbook).
 - **Readiness signal:** when `MIGRATION_EXPECTED_VERSION` is set, successful **`GET /readyz`** includes `migration_version` and `migration_expected_min` for orchestration and dashboards.
@@ -46,4 +46,4 @@ Cross-repo work remains **suite-owned**; use this as a punch list:
 
 ---
 
-*Last updated: 2026-03-23 — Phase C platform slice (restore workflow + readiness fields + this runbook).*
+*Last updated: 2026-03-24 — restore workflow + readiness fields + this runbook.*

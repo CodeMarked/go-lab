@@ -1,3 +1,4 @@
+
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
 /*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
@@ -29,7 +30,7 @@ CREATE TABLE `admin_audit_events` (
   KEY `idx_admin_audit_actor` (`actor_user_id`),
   KEY `idx_admin_audit_action` (`action`),
   CONSTRAINT `fk_admin_audit_actor` FOREIGN KEY (`actor_user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `auth_audit_events`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -47,7 +48,7 @@ CREATE TABLE `auth_audit_events` (
   KEY `idx_auth_audit_created` (`created_at`),
   KEY `idx_auth_audit_user` (`user_id`),
   KEY `idx_auth_audit_type` (`event_type`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=45 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `auth_desktop_exchange_codes`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -68,7 +69,7 @@ CREATE TABLE `auth_desktop_exchange_codes` (
   KEY `idx_auth_desktop_exchange_expires` (`expires_at`),
   KEY `idx_auth_desktop_exchange_consumed` (`consumed_at`),
   CONSTRAINT `fk_auth_desktop_exchange_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `auth_refresh_tokens`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -109,7 +110,7 @@ CREATE TABLE `auth_sessions` (
   KEY `idx_auth_sessions_user` (`user_id`),
   KEY `idx_auth_sessions_revoked` (`revoked_at`),
   CONSTRAINT `fk_auth_sessions_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `backup_restore_requests`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -140,7 +141,7 @@ CREATE TABLE `backup_restore_requests` (
   CONSTRAINT `fk_backup_restore_approval_1` FOREIGN KEY (`approval_1_user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_backup_restore_approval_2` FOREIGN KEY (`approval_2_user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_backup_restore_requested_by` FOREIGN KEY (`requested_by_user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `economy_ledger_events`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -162,6 +163,67 @@ CREATE TABLE `economy_ledger_events` (
   CONSTRAINT `fk_economy_ledger_user` FOREIGN KEY (`platform_user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `operator_case_actions`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `operator_case_actions` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `case_id` bigint unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `action_kind` varchar(32) NOT NULL,
+  `payload_json` json DEFAULT NULL,
+  `reason` text,
+  `actor_user_id` int NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_operator_case_actions_case` (`case_id`),
+  KEY `idx_operator_case_actions_kind` (`action_kind`),
+  KEY `fk_operator_case_actions_actor` (`actor_user_id`),
+  CONSTRAINT `fk_operator_case_actions_actor` FOREIGN KEY (`actor_user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_operator_case_actions_case` FOREIGN KEY (`case_id`) REFERENCES `operator_cases` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `operator_case_notes`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `operator_case_notes` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `case_id` bigint unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `body` text NOT NULL,
+  `created_by_user_id` int NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_operator_case_notes_case` (`case_id`),
+  KEY `fk_operator_case_notes_author` (`created_by_user_id`),
+  CONSTRAINT `fk_operator_case_notes_author` FOREIGN KEY (`created_by_user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_operator_case_notes_case` FOREIGN KEY (`case_id`) REFERENCES `operator_cases` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `operator_cases`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `operator_cases` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `status` varchar(32) NOT NULL DEFAULT 'open',
+  `priority` varchar(16) NOT NULL DEFAULT 'normal',
+  `subject_platform_user_id` int NOT NULL,
+  `subject_character_ref` varchar(128) DEFAULT NULL,
+  `title` varchar(256) NOT NULL,
+  `description` text,
+  `created_by_user_id` int NOT NULL,
+  `assigned_to_user_id` int DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_operator_cases_status` (`status`),
+  KEY `idx_operator_cases_subject_user` (`subject_platform_user_id`),
+  KEY `idx_operator_cases_created` (`created_at`),
+  KEY `fk_operator_cases_created_by` (`created_by_user_id`),
+  KEY `fk_operator_cases_assigned_to` (`assigned_to_user_id`),
+  CONSTRAINT `fk_operator_cases_assigned_to` FOREIGN KEY (`assigned_to_user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_operator_cases_created_by` FOREIGN KEY (`created_by_user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_operator_cases_subject_user` FOREIGN KEY (`subject_platform_user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `platform_roles`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
@@ -170,7 +232,7 @@ CREATE TABLE `platform_roles` (
   `name` varchar(64) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_platform_roles_name` (`name`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `user_identities`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -213,7 +275,7 @@ CREATE TABLE `users` (
   `updated_at` timestamp NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `idx_users_email` (`email`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -224,3 +286,4 @@ CREATE TABLE `users` (
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
+

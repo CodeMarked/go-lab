@@ -45,4 +45,19 @@ func TestHasPermissionSecurityAdmin(t *testing.T) {
 	if HasPermission([]string{"security_admin"}, PermSupportAck) {
 		t.Fatal("security_admin should not get support ack by default")
 	}
+	if !HasPermission([]string{"security_admin"}, PermCasesRead) {
+		t.Fatal("security_admin should read cases")
+	}
+	if !HasPermission([]string{"security_admin"}, PermSanctionsWrite) {
+		t.Fatal("security_admin should write sanctions")
+	}
+	if !HasPermission([]string{"support"}, PermCasesWrite) {
+		t.Fatal("support should write cases")
+	}
+	if HasPermission([]string{"support"}, PermSanctionsWrite) {
+		t.Fatal("support must not write sanctions by default")
+	}
+	if !HasPermission([]string{"gm_liveops"}, PermRecoveryWrite) {
+		t.Fatal("gm_liveops should write recovery")
+	}
 }

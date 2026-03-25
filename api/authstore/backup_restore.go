@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// Backup restore request workflow (Phase C): two distinct approvers, neither the requester.
+// Backup restore request workflow: two distinct approvers, neither the requester.
 
 const (
 	BackupRestoreStatusPending   = "pending"

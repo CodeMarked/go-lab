@@ -12,6 +12,7 @@ import { DataopsComponent } from './dataops/dataops.component';
 import { SecurityComponent } from './security/security.component';
 import { AuditComponent } from './audit/audit.component';
 import { EconomyComponent } from './economy/economy.component';
+import { CasesComponent } from './cases/cases.component';
 
 const routes: Routes = [
   { path: 'login', component: LoginComponent },
@@ -44,6 +45,11 @@ const routes: Routes = [
   {
     path: 'economy',
     component: EconomyComponent,
+    canActivate: [AuthGuard]
+  },
+  {
+    path: 'cases',
+    component: CasesComponent,
     canActivate: [AuthGuard]
   },
   {

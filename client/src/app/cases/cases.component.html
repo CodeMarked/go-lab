@@ -1,0 +1,161 @@
+<section class="panel">
+  <h2>Cases</h2>
+  <p class="hint">
+    Support and moderation cases. In-game enforcement is handled by the game services separately from this form.
+  </p>
+
+  <p *ngIf="loadError" class="warn">
+    Couldn't load cases. Sign in again or ask an administrator to grant case permissions.
+  </p>
+
+  <div *ngIf="me" class="card">
+    <h3>Permissions</h3>
+    <p class="mono small">User {{ me.user_id }} · {{ me.roles.join(', ') || '—' }}</p>
+    <p class="mono small">{{ me.effective_permissions.join(', ') || '—' }}</p>
+  </div>
+
+  <div *ngIf="hasPerm(permCasesWrite)" class="card">
+    <h3>New case</h3>
+    <p class="hint">Mutations require a short reason (at least 10 characters) for the audit trail.</p>
+    <label>
+      Subject user ID
+      <input class="input" type="text" inputmode="numeric" [(ngModel)]="newSubjectUserId" placeholder="Platform user ID" />
+    </label>
+    <p class="hint">Must match an existing user in this environment.</p>
+    <label>
+      Title
+      <input class="input" [(ngModel)]="newTitle" maxlength="256" />
+    </label>
+    <label>
+      Description
+      <textarea class="input" rows="2" [(ngModel)]="newDescription"></textarea>
+    </label>
+    <label>
+      Priority
+      <select class="input" [(ngModel)]="newPriority">
+        <option value="low">low</option>
+        <option value="normal">normal</option>
+        <option value="high">high</option>
+        <option value="urgent">urgent</option>
+      </select>
+    </label>
+    <label>
+      Reason
+      <textarea class="input" rows="2" [(ngModel)]="createReason" placeholder="Required for audit (min. 10 characters)"></textarea>
+    </label>
+    <button type="button" class="btn primary" [disabled]="createCaseDisabled" (click)="submitCreate()">
+      Create case
+    </button>
+  </div>
+
+  <div *ngIf="hasPerm(permCasesRead) && list" class="card">
+    <h3>Case list</h3>
+    <button type="button" class="btn" (click)="refreshMeAndList()">Refresh</button>
+    <div class="table-wrap" *ngIf="list.items.length">
+      <table class="grid">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Status</th>
+            <th>Priority</th>
+            <th>Subject user</th>
+            <th>Title</th>
+            <th>Updated</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of list.items">
+            <td class="mono">{{ row.id }}</td>
+            <td>{{ row.status }}</td>
+            <td>{{ row.priority }}</td>
+            <td>{{ row.subject_platform_user_id }}</td>
+            <td>{{ row.title }}</td>
+            <td class="mono small">{{ row.updated_at }}</td>
+            <td><button type="button" class="btn sm" (click)="selectCase(row)">Open</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p *ngIf="!list.items.length" class="hint">No cases yet.</p>
+  </div>
+
+  <div *ngIf="selected && hasPerm(permCasesRead)" class="card">
+    <h3>Case #{{ selected.id }}</h3>
+    <p class="mono small">Status {{ selected.status }} · Priority {{ selected.priority }}</p>
+    <pre class="mono small">{{ selected | json }}</pre>
+
+    <div *ngIf="hasPerm(permCasesWrite)" class="subpanel">
+      <h4>Update case</h4>
+      <label>Status <input class="input" [(ngModel)]="patchStatus" /></label>
+      <label>Priority <input class="input" [(ngModel)]="patchPriority" /></label>
+      <label>Assigned user id (empty to clear) <input class="input" [(ngModel)]="patchAssigned" /></label>
+      <label>Reason <textarea class="input" rows="2" [(ngModel)]="patchReason"></textarea></label>
+      <button type="button" class="btn" [disabled]="!patchReasonOk" (click)="submitPatch()">Save</button>
+    </div>
+
+    <div *ngIf="hasPerm(permCasesWrite)" class="subpanel">
+      <h4>Add note</h4>
+      <label>Note <textarea class="input" rows="2" [(ngModel)]="noteBody"></textarea></label>
+      <label>Reason <textarea class="input" rows="2" [(ngModel)]="noteReason"></textarea></label>
+      <button type="button" class="btn" [disabled]="!noteReasonOk" (click)="submitNote()">Add note</button>
+    </div>
+
+    <div *ngIf="hasPerm(permSanctions)" class="subpanel">
+      <h4>Record sanction</h4>
+      <label>
+        Type
+        <select class="input" [(ngModel)]="sanctionType">
+          <option value="warning">warning</option>
+          <option value="mute">mute</option>
+          <option value="trade_lock">trade_lock</option>
+          <option value="temp_ban">temp_ban</option>
+          <option value="perm_ban">perm_ban</option>
+        </select>
+      </label>
+      <label>Expires (RFC3339, optional) <input class="input" [(ngModel)]="sanctionExpires" /></label>
+      <label>Reason <textarea class="input" rows="2" [(ngModel)]="sanctionReason"></textarea></label>
+      <button type="button" class="btn" [disabled]="!sanctionReasonOk" (click)="submitSanction()">Record sanction</button>
+    </div>
+
+    <div *ngIf="hasPerm(permRecovery)" class="subpanel">
+      <h4>Recovery request</h4>
+      <label>Character ref (optional; defaults to case subject) <input class="input" [(ngModel)]="recoveryCharRef" /></label>
+      <label>Reason <textarea class="input" rows="2" [(ngModel)]="recoveryReason"></textarea></label>
+      <button type="button" class="btn" [disabled]="!recoveryReasonOk" (click)="submitRecovery()">Record recovery</button>
+    </div>
+
+    <div *ngIf="hasPerm(permAppeals)" class="subpanel">
+      <h4>Resolve appeal</h4>
+      <label>
+        Outcome
+        <select class="input" [(ngModel)]="appealOutcome">
+          <option value="upheld">upheld</option>
+          <option value="overturned">overturned</option>
+        </select>
+      </label>
+      <label>Notes <input class="input" [(ngModel)]="appealNotes" /></label>
+      <label>Reason <textarea class="input" rows="2" [(ngModel)]="appealReason"></textarea></label>
+      <button type="button" class="btn" [disabled]="!appealReasonOk" (click)="submitAppeal()">Resolve</button>
+    </div>
+
+    <div *ngIf="notes" class="subpanel">
+      <h4>Notes</h4>
+      <ul class="kv">
+        <li *ngFor="let n of notes.items">
+          <span>{{ n.created_at }}</span> — {{ n.body }} (by {{ n.created_by_user_id }})
+        </li>
+      </ul>
+    </div>
+
+    <div *ngIf="actions" class="subpanel">
+      <h4>Actions</h4>
+      <ul class="kv">
+        <li *ngFor="let a of actions.items">
+          <span>{{ a.created_at }}</span> — {{ a.action_kind }} (actor {{ a.actor_user_id }})
+          <span *ngIf="a.payload" class="mono small">{{ a.payload | json }}</span>
+        </li>
+      </ul>
+    </div>
+  </div>
+</section>

@@ -1,4 +1,4 @@
-# Security posture and roadmap (v0.1)
+# Security posture and roadmap
 
 **Audience:** operators and architects selling or hardening the suite. **Companion:** [ci.md](ci.md) (what automated tests do *not* cover).
 
@@ -6,8 +6,8 @@
 
 1. **Clear trust boundaries:** Browser / desktop / M2M each have documented auth paths ([platform-api-consumer-brief.md](platform-api-consumer-brief.md), [desktop-auth-bridge.md](desktop-auth-bridge.md)). Prefer **no secrets in browser bundles**; server-side holds `PLATFORM_CLIENT_SECRET`.
 2. **Defense in depth:** TLS at the edge, tight CORS, HttpOnly cookies + CSRF for session mutations, rate limits + lockout, optional **Redis** for shared limits across replicas ([auth-session.md](auth-session.md)).
-3. **Least privilege:** Human-only routes reject `client:*` ([openapi.yaml](openapi.yaml)); scope M2M over time ([MASTER_PLAN.md](MASTER_PLAN.md) §9).
-4. **Auditability:** Auth audit events exist; taxonomy can mature ([MASTER_PLAN.md](MASTER_PLAN.md) §9).
+3. **Least privilege:** Human-only routes reject `client:*` ([openapi.yaml](openapi.yaml)); scope M2M over time ([MASTER_PLAN.md](MASTER_PLAN.md) §8).
+4. **Auditability:** Auth audit events exist; taxonomy can mature ([MASTER_PLAN.md](MASTER_PLAN.md) §8).
 5. **Migrations-only schema:** No runtime DDL surprises ([migrations.md](migrations.md)).
 
 None of this replaces a **threat model** or **penetration test**; it makes outcomes more predictable when you add them.

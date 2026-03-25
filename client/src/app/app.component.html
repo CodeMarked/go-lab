@@ -13,12 +13,13 @@
     <nav class="admin-nav">
       <a routerLink="/dashboard" routerLinkActive="active">Dashboard</a>
       <a routerLink="/users" routerLinkActive="active">Users</a>
-      <a routerLink="/players" routerLinkActive="active">Players</a>
-      <a routerLink="/characters" routerLinkActive="active">Characters</a>
-      <a routerLink="/economy" routerLinkActive="active">Economy</a>
-      <a routerLink="/dataops" routerLinkActive="active">DataOps</a>
-      <a routerLink="/security" routerLinkActive="active">Security</a>
-      <a routerLink="/audit" routerLinkActive="active">Audit</a>
+      <a *ngIf="hasPerm('cases.read')" routerLink="/cases" routerLinkActive="active">Cases</a>
+      <a *ngIf="hasPerm('players.read')" routerLink="/players" routerLinkActive="active">Players</a>
+      <a *ngIf="hasPerm('characters.read')" routerLink="/characters" routerLinkActive="active">Characters</a>
+      <a *ngIf="hasPerm('economy.read')" routerLink="/economy" routerLinkActive="active">Economy</a>
+      <a *ngIf="hasPerm('backups.read')" routerLink="/dataops" routerLinkActive="active">DataOps</a>
+      <a *ngIf="hasPerm('security.read')" routerLink="/security" routerLinkActive="active">Security</a>
+      <a *ngIf="hasPerm('audit.read')" routerLink="/audit" routerLinkActive="active">Audit</a>
     </nav>
   </header>
   <main>

@@ -2,7 +2,7 @@
 
 **Audience:** suite architecture and schema planning. **Go-lab** migrations only cover the **platform** slice; TaskStack and Marble carry their own databases (or schemas) in their repos, linked by **`platform_user_id`** (or equivalent UUID) as a contract.
 
-**Related:** [MASTER_PLAN.md](MASTER_PLAN.md) §2–§6 · [platform-control-plane.md](platform-control-plane.md) (Phase A API/DB slice vs stubs) · [adr-account-linking.md](adr-account-linking.md) · [desktop-auth-bridge.md](desktop-auth-bridge.md) · [openapi.yaml](openapi.yaml)
+**Related:** [MASTER_PLAN.md](MASTER_PLAN.md) §2–§6 · [platform-control-plane.md](platform-control-plane.md) (API/DB slice vs stubs) · [adr-account-linking.md](adr-account-linking.md) · [desktop-auth-bridge.md](desktop-auth-bridge.md) · [openapi.yaml](openapi.yaml)
 
 ---
 
@@ -10,7 +10,7 @@
 
 | Pillar | Owns (examples) | Does **not** own |
 |--------|-------------------|------------------|
-| **Platform (go-lab)** | Login identifiers (`users`, `user_identities`), sessions, auth audit, operator **restore governance** (`backup_restore_requests`), read-only **economy operator ledger** rows, future **entitlements** / tenancy keys tied to `users.id` | Game characters, posts, DMs, sim state, rendering |
+| **Platform (go-lab)** | Login identifiers (`users`, `user_identities`), sessions, auth audit, operator **restore governance** (`backup_restore_requests`), **operator cases** (`operator_cases` / notes / actions) for GM workflows + audit, read-only **economy operator ledger** rows, future **entitlements** / tenancy keys tied to `users.id` | Game characters, posts, DMs, sim state, rendering |
 | **TaskStack** | Website UX data: posts, threads, notifications, workspace membership, settings that are **product-specific** | Opaque session secret state (platform); authoritative gameplay |
 | **Marble** | **Authoritative** gameplay: characters, stats, progression, inventory, in-session / in-world mail, match snapshots the sim agrees on | Platform password hashes; TaskStack social graph (unless you deliberately unify) |
 
@@ -82,6 +82,6 @@ So: human-only is **blast-radius control** for **service accounts**, not a guara
 | `characters`, `player_progress`, `inventory` | Marble | authoritative sim + persistence |
 | `auth_audit_events` | Platform | security audit |
 | `entitlements` (SKU / feature flags) | Platform (v1 sketch) | consumed by TaskStack/Marble |
-| `economy_ledger_events` (operator read model) | Platform (Phase B) | append-only copy for admin/support visibility; Marble remains authoritative for gameplay economy |
+| `economy_ledger_events` (operator read model) | Platform (operator ledger) | append-only copy for admin/support visibility; Marble remains authoritative for gameplay economy |
 
 Adjust names when each product’s schema is implemented; keep **ownership** stable.

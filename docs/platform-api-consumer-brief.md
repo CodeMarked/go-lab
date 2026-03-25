@@ -6,7 +6,7 @@
 
 **Canonical contract:** [openapi.yaml](openapi.yaml) (validated in CI). This page summarizes behavior and links to topic guides.
 
-**Planning and backlog:** [MASTER_PLAN.md](MASTER_PLAN.md) §7 (shipped), §9 (backlog). Short-form session notes: [CHAT_TODOS.md](../CHAT_TODOS.md).
+**Planning and backlog:** [MASTER_PLAN.md](MASTER_PLAN.md) §7 (shipped), §8 (backlog). Short-form session notes: [CHAT_TODOS.md](../CHAT_TODOS.md).
 
 ---
 
@@ -77,12 +77,22 @@ Use [openapi.yaml](openapi.yaml) for request and response bodies and security re
 | platformBackupsRestoreRequestReject | POST | `/api/v1/backups/restore-requests/{id}/reject` | Ops (`backups.restore.approve` + reason) |
 | platformBackupsRestoreRequestFulfill | POST | `/api/v1/backups/restore-requests/{id}/fulfill` | Ops (`backups.restore.fulfill` + reason); after out-of-band restore |
 | platformBackupsRestoreRequestCancel | POST | `/api/v1/backups/restore-requests/{id}/cancel` | Requester (`backups.restore.request` + reason) |
+| platformCasesList | GET | `/api/v1/cases` | Ops (`cases.read`) |
+| platformCasesCreate | POST | `/api/v1/cases` | Ops (`cases.write` + reason) |
+| platformCasesGet | GET | `/api/v1/cases/{id}` | Ops (`cases.read`) |
+| platformCasesPatch | PATCH | `/api/v1/cases/{id}` | Ops (`cases.write` + reason) |
+| platformCasesNotesList | GET | `/api/v1/cases/{id}/notes` | Ops (`cases.read`) |
+| platformCasesNotesCreate | POST | `/api/v1/cases/{id}/notes` | Ops (`cases.write` + reason) |
+| platformCasesActionsList | GET | `/api/v1/cases/{id}/actions` | Ops (`cases.read`) |
+| platformCasesSanctionCreate | POST | `/api/v1/cases/{id}/sanctions` | Ops (`sanctions.write` + reason) |
+| platformCasesRecoveryCreate | POST | `/api/v1/cases/{id}/recovery-requests` | Ops (`recovery.write` + reason) |
+| platformCasesAppealResolve | POST | `/api/v1/cases/{id}/appeals/resolve` | Ops (`appeals.resolve` + reason) |
 
-Physical backup/restore execution is **not** performed by these routes — see [phase-c-split-host-operations.md](phase-c-split-host-operations.md).
+Physical backup/restore execution is **not** performed by these routes — see [split-host-operations.md](split-host-operations.md).
 
 ---
 
-## Marble-oriented flow (Phase 5)
+## Marble-oriented flow (desktop join)
 
 End-to-end sequence and security requirements: **[desktop-auth-bridge.md](desktop-auth-bridge.md)** (exchange codes, PKCE, callback host allowlist, join JWT).
 

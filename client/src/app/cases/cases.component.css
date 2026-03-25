@@ -1,0 +1,9 @@
+.subpanel {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.subpanel h4 {
+  margin: 0 0 0.5rem;
+}

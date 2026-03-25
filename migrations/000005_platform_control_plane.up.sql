@@ -1,4 +1,4 @@
--- Phase A: platform operator RBAC + immutable admin audit trail (control-plane foundations).
+-- Platform operator RBAC + immutable admin audit trail (control-plane foundations).
 -- Assign roles via user_platform_roles → platform_roles (see docs/platform-operator-roles.md).
 
 CREATE TABLE IF NOT EXISTS platform_roles (
